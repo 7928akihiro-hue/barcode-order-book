@@ -480,13 +480,22 @@
         <div class="idle-msg" id="scannerIdleMsg">カメラを起動して読み取りを開始します</div>
       </div>
 
-      <div class="card" id="photoScanCard" style="text-align:center;">
-        <button class="btn primary" style="width:100%; padding:14px; font-size:16px;" onclick="document.getElementById('photoCaptureInput').click()">📷 写真を撮ってバーコードを読み取る</button>
-        <input type="file" accept="image/*" capture="environment" id="photoCaptureInput" style="display:none;" onchange="handlePhotoCapture(event)">
-        <p class="hint" style="margin:8px 0 0;">ライブのカメラ映像読み取りが使えない環境向けの代替方法です。ボタンを押すたびに写真を1枚撮って読み取ります。</p>
-      </div>
-
       <div class="scan-status" id="scanStatus">バーコードを商品マスタと照合します</div>
+
+      <div class="card" id="scanStagingCard" style="display:none; border-color: var(--accent);">
+        <div class="row between" style="margin-bottom:8px;">
+          <span class="chip" style="background:var(--accent-soft); color:var(--accent);">読み取りました</span>
+          <span class="jan" id="stagingJan"></span>
+        </div>
+        <div class="stack">
+          <div class="item-name" id="stagingName" style="font-weight:700; font-size:16px;"></div>
+          <label class="field">発注数量（ケース） <input type="number" id="stagingCases" inputmode="numeric" min="1" value="1"></label>
+          <div class="row">
+            <button class="btn primary block" onclick="stagingSubmit()">発注リストに追加</button>
+            <button class="btn ghost" onclick="dismissStaging()">今回は無視</button>
+          </div>
+        </div>
+      </div>
 
       <div class="manual-add card">
         <label class="field">
@@ -1002,9 +1011,9 @@
     var product = findProduct(jan);
     if (navigator.vibrate) navigator.vibrate(60);
     if (product) {
-      addToOrder(product, 1);
-      setStatus('追加：' + product.name + '　+1ケース', 'ok');
-      addScanFeedEntry(product.name + '　+1ケース', true);
+      showScanStaging(product);
+      setStatus('読み取りました：' + product.name + '　数量を確認して追加してください', 'ok');
+      addScanFeedEntry(product.name + '　読み取り', true);
     } else {
       setStatus('未登録のバーコードです：下でそのまま登録できます', 'warn');
       addScanFeedEntry('未登録：' + jan, false);
@@ -1012,7 +1021,32 @@
     }
   }
 
+  function showScanStaging(product) {
+    dismissQuickRegister();
+    document.getElementById('stagingJan').textContent = product.jan;
+    document.getElementById('stagingName').textContent = product.name;
+    document.getElementById('stagingCases').value = 1;
+    document.getElementById('scanStagingCard').dataset.jan = product.jan;
+    document.getElementById('scanStagingCard').style.display = 'block';
+  }
+
+  function dismissStaging() {
+    document.getElementById('scanStagingCard').style.display = 'none';
+  }
+
+  function stagingSubmit() {
+    var jan = document.getElementById('scanStagingCard').dataset.jan;
+    var product = findProduct(jan);
+    if (!product) { dismissStaging(); return; }
+    var cases = parseInt(document.getElementById('stagingCases').value, 10) || 1;
+    addToOrder(product, cases);
+    dismissStaging();
+    setStatus('追加：' + product.name + '　+' + cases + 'ケース', 'ok');
+    addScanFeedEntry(product.name + '　+' + cases + 'ケース', true);
+  }
+
   function showQuickRegister(jan) {
+    dismissStaging();
     document.getElementById('quickRegisterJan').textContent = jan;
     document.getElementById('quickRegisterCard').dataset.jan = jan;
     document.getElementById('qName').value = '';
@@ -1153,44 +1187,6 @@
     if (zxingControls) { try { zxingControls.stop(); } catch (e) {} zxingControls = null; }
     if (zxingReader) { try { zxingReader.reset(); } catch (e) {} zxingReader = null; }
     if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
-  }
-
-  // Fallback that does not use getUserMedia at all: take one still photo via the
-  // device's native camera app (OS-level, outside the page's own media permissions)
-  // and decode the barcode from that image with ZXing.
-  function handlePhotoCapture(evt) {
-    var input = evt.target;
-    var file = input.files && input.files[0];
-    input.value = ''; // allow capturing the next photo even if the filename repeats
-    if (!file) return;
-    if (!window.ZXing || !window.ZXing.BrowserMultiFormatReader) {
-      toast('この端末では写真からの読み取りに対応していません');
-      return;
-    }
-    setStatus('写真を解析中…', null);
-    var url = URL.createObjectURL(file);
-    var img = new Image();
-    img.onload = function () {
-      var hints = new Map();
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
-        ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
-        ZXing.BarcodeFormat.CODE_128
-      ]);
-      var reader = new ZXing.BrowserMultiFormatReader(hints);
-      reader.decodeFromImageElement(img).then(function (result) {
-        URL.revokeObjectURL(url);
-        if (result) handleDetectedCode(result.getText());
-      }).catch(function () {
-        URL.revokeObjectURL(url);
-        setStatus('写真からバーコードを検出できませんでした。バーコードが大きく・まっすぐ写るように撮り直してください', 'warn');
-      });
-    };
-    img.onerror = function () {
-      URL.revokeObjectURL(url);
-      setStatus('写真の読み込みに失敗しました。もう一度お試しください', 'warn');
-    };
-    img.src = url;
   }
 
   /* ---------------- capability bootstrap ---------------- */
