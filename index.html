@@ -524,11 +524,11 @@
             <div>発注単位：<span id="stagingCaseQtyInfo"></span></div>
             <div>単価：<span id="stagingPrice"></span></div>
           </div>
-          <label class="field">発注数量
+          <label class="field" style="gap:1px;">発注数量
             <div class="row" style="align-items:center; gap:8px;">
               <div style="position:relative; flex:1;">
-                <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-soft); font-size:14px; pointer-events:none;">ケース</span>
-                <input type="number" id="stagingCases" inputmode="numeric" min="1" value="1" style="width:100%; padding-left:58px; text-align:right;">
+                <input type="number" id="stagingCases" inputmode="numeric" min="1" value="1" style="width:100%; padding-right:58px; text-align:left;">
+                <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--ink-soft); font-size:14px; pointer-events:none;">ケース</span>
               </div>
               <div class="vstepper">
                 <button type="button" onclick="adjustStagingCases(1)" aria-label="数量を増やす">＋</button>
@@ -636,6 +636,15 @@
         </div>
         <p class="hint" style="margin-bottom:10px;">たまった発注データをGoogle Driveへ送ります。PC側（Claude）でそのデータから発注書を自動作成できます。</p>
         <button class="btn primary block" onclick="sendToPC()" id="sendToPcBtn">たまったデータをPCに送信</button>
+        <div style="text-align:center; margin-top:6px;">
+          <button class="btn ghost" style="font-size:11px; padding:4px 10px;" onclick="togglePcSendSettings()">送信先の設定</button>
+        </div>
+        <div id="pcSendSettings" style="display:none; margin-top:10px;">
+          <label class="field">送信先URL（Google Apps ScriptのWebアプリURL）
+            <input type="text" id="pcSendUrl" placeholder="https://script.google.com/macros/s/…/exec">
+          </label>
+          <button class="btn small block" style="margin-top:6px;" onclick="savePcSendUrl()">保存</button>
+        </div>
       </div>
 
       <div class="row" style="margin-top:14px;">
@@ -1327,6 +1336,27 @@
   /* ---------------- send accumulated order data to PC (via Google Drive) ---------------- */
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
+  var PC_SEND_URL_KEY = 'pcSendWebhookUrl';
+
+  function getPcSendUrl() {
+    try { return localStorage.getItem(PC_SEND_URL_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  function togglePcSendSettings() {
+    var el = document.getElementById('pcSendSettings');
+    var opening = el.style.display !== 'block';
+    el.style.display = opening ? 'block' : 'none';
+    if (opening) { document.getElementById('pcSendUrl').value = getPcSendUrl(); }
+  }
+
+  function savePcSendUrl() {
+    var url = document.getElementById('pcSendUrl').value.trim();
+    if (!url) { toast('URLを入力してください'); return; }
+    try { localStorage.setItem(PC_SEND_URL_KEY, url); } catch (e) { toast('この端末では保存できませんでした'); return; }
+    toast('送信先を保存しました');
+    document.getElementById('pcSendSettings').style.display = 'none';
+  }
+
   function sendToPC() {
     var items = Object.keys(order).map(function (k) {
       var it = order[k];
@@ -1338,10 +1368,18 @@
       };
     });
     if (items.length === 0) { toast('発注リストが空です'); return; }
-    if (!mcpNS) {
-      toast('この画面ではPC送信が使えません。CSV保存をご利用ください');
-      return;
-    }
+
+    if (mcpNS) { sendToPCviaDrive(items); return; }
+
+    var webhookUrl = getPcSendUrl();
+    if (webhookUrl) { sendToPCviaWebhook(items, webhookUrl); return; }
+
+    toast('送信先が未設定です。「送信先の設定」からURLを登録してください');
+    document.getElementById('pcSendSettings').style.display = 'block';
+    document.getElementById('pcSendUrl').focus();
+  }
+
+  function sendToPCviaDrive(items) {
     var btn = document.getElementById('sendToPcBtn');
     var chip = document.getElementById('pcSendStatusChip');
     btn.disabled = true;
@@ -1377,6 +1415,38 @@
       } else {
         toast('送信に失敗しました。もう一度お試しください');
       }
+    });
+  }
+
+  function sendToPCviaWebhook(items, url) {
+    var btn = document.getElementById('sendToPcBtn');
+    var chip = document.getElementById('pcSendStatusChip');
+    btn.disabled = true;
+    btn.textContent = '送信中…';
+
+    var now = new Date();
+    var snapshot = { sentAt: now.toISOString(), items: items };
+
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain avoids a CORS preflight that Apps Script can't answer
+      body: JSON.stringify(snapshot)
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      btn.disabled = false;
+      btn.textContent = 'たまったデータをPCに送信';
+      if (data && data.status === 'ok') {
+        toast('PCに送信しました' + (data.filename ? '：' + data.filename : ''));
+        chip.textContent = '送信済み ' + pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+        chip.style.background = 'var(--success-soft)';
+        chip.style.color = 'var(--success)';
+        resetScanFeed();
+      } else {
+        toast('送信に失敗しました：' + ((data && data.message) || '不明なエラー'));
+      }
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = 'たまったデータをPCに送信';
+      toast('送信に失敗しました。設定したURLと通信状態を確認してください');
     });
   }
 
