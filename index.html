@@ -511,10 +511,16 @@
       <div class="card" id="scanStagingCard" style="display:none; border-color: var(--accent);">
         <div class="row between" style="margin-bottom:8px;">
           <span class="chip" style="background:var(--accent-soft); color:var(--accent);">読み取りました</span>
-          <span class="jan" id="stagingJan"></span>
         </div>
         <div class="stack">
+          <div class="jan" id="stagingJan" style="font-size:26px; font-weight:700; color:var(--ink);"></div>
           <div class="item-name" id="stagingName" style="font-weight:700; font-size:16px;"></div>
+          <div class="field-grid" style="font-size:13px; color:var(--ink-soft);">
+            <div>品番：<span id="stagingItemNo"></span></div>
+            <div>仕入れ先：<span id="stagingSupplier"></span></div>
+            <div>発注単位：<span id="stagingCaseQtyInfo"></span></div>
+            <div>単価：<span id="stagingPrice"></span></div>
+          </div>
           <label class="field">発注数量（ケース）
             <div class="row" style="align-items:center; gap:8px;">
               <input type="number" id="stagingCases" inputmode="numeric" min="1" value="1" style="flex:1;">
@@ -531,7 +537,7 @@
         </div>
       </div>
 
-      <div class="manual-add card">
+      <div class="manual-add card" id="manualAddCard">
         <label class="field">
           JAN / バーコードを直接入力
           <div class="row">
@@ -551,7 +557,7 @@
           <label class="field">商品名 <input type="text" id="qName" placeholder="○○ 500ml"></label>
           <div class="field-grid">
             <label class="field">品番（任意） <input type="text" id="qItemNo" placeholder="任意"></label>
-            <label class="field">入数（1ケースの個数） <input type="number" id="qCaseQty" min="1" value="1"></label>
+            <label class="field">発注単位（1ケースの個数） <input type="number" id="qCaseQty" min="1" value="1"></label>
           </div>
           <div class="field-grid">
             <label class="field">仕入れ先名 <input type="text" id="qSupplier" placeholder="○○商店"></label>
@@ -573,7 +579,7 @@
     <!-- ================= PRODUCTS SCREEN ================= -->
     <section id="screen-products" class="screen">
       <h2 class="section-title">商品マスタ <span class="count" id="productCount">0件</span></h2>
-      <p class="hint">最初にスキャン対象の商品を登録してください。JANコード・品番・商品名・仕入れ先・仕入れ先メール・入数（1ケースの個数）・単価を登録します。スキャン1回で1ケース分が発注リストに追加されます。</p>
+      <p class="hint">最初にスキャン対象の商品を登録してください。JANコード・品番・商品名・仕入れ先・仕入れ先メール・発注単位（1ケースの個数）・単価を登録します。スキャン1回で1ケース分が発注リストに追加されます。</p>
 
       <div class="card">
         <div class="stack">
@@ -581,7 +587,7 @@
           <label class="field">商品名 <input type="text" id="pName" placeholder="○○ 500ml"></label>
           <div class="field-grid">
             <label class="field">品番（任意） <input type="text" id="pItemNo" placeholder="任意"></label>
-            <label class="field">入数（1ケースの個数） <input type="number" id="pCaseQty" min="1" value="1"></label>
+            <label class="field">発注単位（1ケースの個数） <input type="number" id="pCaseQty" min="1" value="1"></label>
           </div>
           <div class="field-grid">
             <label class="field">仕入れ先名 <input type="text" id="pSupplier" placeholder="○○商店"></label>
@@ -593,7 +599,7 @@
 
         <details class="import">
           <summary>CSVで一括登録・書き出し</summary>
-          <p class="hint">1行1商品、カンマ区切り：<br><code>JANコード,品番,商品名,仕入れ先,仕入れ先メール,入数,単価</code></p>
+          <p class="hint">1行1商品、カンマ区切り：<br><code>JANコード,品番,商品名,仕入れ先,仕入れ先メール,発注単位,単価</code></p>
           <div class="row">
             <input type="file" id="csvFile" accept=".csv,text/csv" onchange="importCsv(event)">
           </div>
@@ -781,7 +787,7 @@
       return '<div class="item-row">' +
         '<div class="item-main">' +
           '<div class="item-name">' + escapeHtml(p.name) + '</div>' +
-          '<div class="item-sub">' + (p.itemNo ? escapeHtml(p.itemNo) + ' ・ ' : '') + '<span class="jan">' + escapeHtml(p.jan) + '</span> ・ ' + escapeHtml(p.supplier) + ' ・ 入数' + (p.caseQty || 1) + ' ・ ¥' + (p.price || 0) + '</div>' +
+          '<div class="item-sub">' + (p.itemNo ? escapeHtml(p.itemNo) + ' ・ ' : '') + '<span class="jan">' + escapeHtml(p.jan) + '</span> ・ ' + escapeHtml(p.supplier) + ' ・ 発注単位' + (p.caseQty || 1) + ' ・ ¥' + (p.price || 0) + '</div>' +
         '</div>' +
         '<button class="btn small" onclick="editProduct(\'' + p.jan + '\')">編集</button>' +
         '<button class="btn small ghost" onclick="deleteProduct(\'' + p.jan + '\')">削除</button>' +
@@ -842,7 +848,7 @@
   }
 
   function downloadOrderCsv() {
-    var rows = [['仕入れ先', '品番', '商品名', 'JANコード', '入数', 'ケース数', '発注数量（個）', '単価', '金額'].join(',')];
+    var rows = [['仕入れ先', '品番', '商品名', 'JANコード', '発注単位', 'ケース数', '発注数量（個）', '単価', '金額'].join(',')];
     Object.keys(order).forEach(function (jan) {
       var it = order[jan];
       var pieces = (it.caseQty || 1) * it.cases;
@@ -970,7 +976,7 @@
         var amount = (it.price || 0) * pieces;
         supplierTotal += amount;
         return '<div class="item-row">' +
-          '<div class="item-main"><div class="item-name">' + escapeHtml(it.name) + '</div><div class="item-sub jan">' + escapeHtml(it.jan) + ' ・ 入数' + (it.caseQty || 1) + '×' + it.cases + 'ケース＝' + pieces + '個</div></div>' +
+          '<div class="item-main"><div class="item-name">' + escapeHtml(it.name) + '</div><div class="item-sub jan">' + escapeHtml(it.jan) + ' ・ 発注単位' + (it.caseQty || 1) + '×' + it.cases + 'ケース＝' + pieces + '個</div></div>' +
           '<div class="stepper">' +
             '<button onclick="changeQty(\'' + it.jan + '\', -1)" aria-label="ケース数を減らす">−</button>' +
             '<span class="qty">' + it.cases + '</span>' +
@@ -1058,13 +1064,19 @@
     dismissQuickRegister();
     document.getElementById('stagingJan').textContent = product.jan;
     document.getElementById('stagingName').textContent = product.name;
+    document.getElementById('stagingItemNo').textContent = product.itemNo || '－';
+    document.getElementById('stagingSupplier').textContent = product.supplier || '－';
+    document.getElementById('stagingCaseQtyInfo').textContent = (product.caseQty || 1) + '個';
+    document.getElementById('stagingPrice').textContent = '¥' + (product.price || 0);
     document.getElementById('stagingCases').value = 1;
     document.getElementById('scanStagingCard').dataset.jan = product.jan;
     document.getElementById('scanStagingCard').style.display = 'block';
+    document.getElementById('manualAddCard').style.display = 'none';
   }
 
   function dismissStaging() {
     document.getElementById('scanStagingCard').style.display = 'none';
+    document.getElementById('manualAddCard').style.display = 'block';
   }
 
   function stagingSubmit() {
