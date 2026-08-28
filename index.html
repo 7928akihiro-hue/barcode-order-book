@@ -1426,11 +1426,15 @@
 
     var now = new Date();
     var snapshot = { sentAt: now.toISOString(), items: items };
+    // Base64-encode the UTF-8 JSON so the POST body is pure ASCII: Apps Script's
+    // e.postData.contents mangles multi-byte (Japanese) text, but base64 text survives intact.
+    var jsonUtf8 = JSON.stringify(snapshot);
+    var base64Body = btoa(unescape(encodeURIComponent(jsonUtf8)));
 
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain avoids a CORS preflight that Apps Script can't answer
-      body: JSON.stringify(snapshot)
+      body: base64Body
     }).then(function (res) { return res.json(); }).then(function (data) {
       btn.disabled = false;
       btn.textContent = 'たまったデータをPCに送信';
