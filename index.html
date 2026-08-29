@@ -130,12 +130,6 @@
     text-align: center;
   }
 
-  .brand-truck-row {
-    display: flex;
-    justify-content: center;
-    margin-top: 4px;
-  }
-
   .brand .stamp {
     width: 52px;
     height: 52px;
@@ -175,6 +169,15 @@
 
   h1 .h1-line1, h1 .h1-line2 { display: block; }
   h1 .h1-line2 { margin-top: -15px; }
+
+  /* Keep the logo, title and truck on one line on phone-width screens */
+  @media (max-width: 480px) {
+    .brand { gap: 6px; flex-wrap: nowrap; }
+    .brand .stamp.stamp-warehouse { width: 46px; height: 46px; }
+    .brand .stamp.stamp-truck { width: 52px; height: 42px; }
+    h1 { font-size: 15.5px; letter-spacing: 0; }
+    h1 .h1-line2 { margin-top: -9px; }
+  }
 
   .tagline {
     margin: 4px 0 16px;
@@ -508,8 +511,6 @@
         </svg>
       </div>
       <h1><span class="h1-line1">南邦エンタープライズ</span><br><span class="h1-line2">Warehouse Manager</span></h1>
-    </div>
-    <div class="brand-truck-row">
       <div class="stamp stamp-truck" aria-hidden="true">
         <svg viewBox="0 0 64 52" width="62" height="50" xmlns="http://www.w3.org/2000/svg">
           <!-- speed lines -->
