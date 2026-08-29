@@ -643,6 +643,7 @@
           <label class="field">送信先URL（Google Apps ScriptのWebアプリURL）
             <input type="text" id="pcSendUrl" placeholder="https://script.google.com/macros/s/…/exec">
           </label>
+          <p class="hint" id="pcSendUrlInfo" style="margin:4px 0 0;"></p>
           <button class="btn small block" style="margin-top:6px;" onclick="savePcSendUrl()">保存</button>
         </div>
       </div>
@@ -1346,15 +1347,19 @@
     var el = document.getElementById('pcSendSettings');
     var opening = el.style.display !== 'block';
     el.style.display = opening ? 'block' : 'none';
-    if (opening) { document.getElementById('pcSendUrl').value = getPcSendUrl(); }
+    if (opening) {
+      var saved = getPcSendUrl();
+      document.getElementById('pcSendUrl').value = saved;
+      document.getElementById('pcSendUrlInfo').textContent = saved ? '保存済み：' + saved.length + '文字' : '未設定';
+    }
   }
 
   function savePcSendUrl() {
     var url = document.getElementById('pcSendUrl').value.trim();
     if (!url) { toast('URLを入力してください'); return; }
     try { localStorage.setItem(PC_SEND_URL_KEY, url); } catch (e) { toast('この端末では保存できませんでした'); return; }
-    toast('送信先を保存しました');
-    document.getElementById('pcSendSettings').style.display = 'none';
+    toast('送信先を保存しました（' + url.length + '文字）');
+    document.getElementById('pcSendUrlInfo').textContent = '保存済み：' + url.length + '文字';
   }
 
   function sendToPC() {
@@ -1445,12 +1450,20 @@
         chip.style.color = 'var(--success)';
         resetScanFeed();
       } else {
-        toast('送信に失敗しました：' + ((data && data.message) || '不明なエラー'));
+        var msg1 = (data && data.message) || '不明なエラー';
+        toast('送信に失敗しました：' + msg1);
+        chip.textContent = '失敗：' + msg1;
+        chip.style.background = 'var(--warning-soft)';
+        chip.style.color = 'var(--warning)';
       }
-    }).catch(function () {
+    }).catch(function (err) {
       btn.disabled = false;
       btn.textContent = 'たまったデータをPCに送信';
-      toast('送信に失敗しました。設定したURLと通信状態を確認してください');
+      var detail = (err && (err.name || '')) + (err && err.message ? '：' + err.message : (err ? '：' + String(err) : ''));
+      toast('送信に失敗しました。' + detail);
+      chip.textContent = '失敗' + (detail ? '［' + detail + '］' : '');
+      chip.style.background = 'var(--warning-soft)';
+      chip.style.color = 'var(--warning)';
     });
   }
 
