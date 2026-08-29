@@ -1131,7 +1131,7 @@
     var h = sendHistory[idx];
     if (!h) return;
     currentHistoryIdx = idx;
-    closeSendHistorySupplierDetail();
+    document.getElementById('sendHistorySupplierCard').style.display = 'none';
 
     var d = new Date(h.sentAt);
     document.getElementById('sendHistoryDetailDate').textContent =
@@ -1156,6 +1156,7 @@
         '</div></div>';
     }).join('');
 
+    document.getElementById('sendHistoryCard').style.display = 'none'; // collapse the date/time list while a send's detail is open
     var card = document.getElementById('sendHistoryDetailCard');
     card.style.display = 'block';
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1180,18 +1181,24 @@
       '</div>';
     }).join('');
 
+    document.getElementById('sendHistoryDetailCard').style.display = 'none'; // collapse the supplier list while an item detail is open
     var card = document.getElementById('sendHistorySupplierCard');
     card.style.display = 'block';
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // "戻る" on the item detail: back up one level, to the supplier list (the date/time list stays collapsed)
   function closeSendHistorySupplierDetail() {
     document.getElementById('sendHistorySupplierCard').style.display = 'none';
+    if (currentHistoryIdx !== null) { document.getElementById('sendHistoryDetailCard').style.display = 'block'; }
   }
 
+  // "閉じる" on the supplier list: back up to the top, re-expanding the date/time list
   function closeSendHistoryDetail() {
+    currentHistoryIdx = null;
+    document.getElementById('sendHistorySupplierCard').style.display = 'none';
     document.getElementById('sendHistoryDetailCard').style.display = 'none';
-    closeSendHistorySupplierDetail();
+    document.getElementById('sendHistoryCard').style.display = 'block';
   }
 
   function groupOrderBySupplier() {
