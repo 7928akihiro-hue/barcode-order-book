@@ -1121,12 +1121,15 @@
     document.getElementById('sendHistoryDetailDate').textContent =
       pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' 送信';
     document.getElementById('sendHistoryDetailItems').innerHTML = h.items.map(function (it) {
-      return '<div class="item-row">' +
-        '<div class="item-main">' +
-          '<div class="item-name">' + escapeHtml(it.name || '') + '</div>' +
-          '<div class="item-sub">' + escapeHtml(it.supplier || '') + ' ・ <span class="jan">' + escapeHtml(it.jan || '') + '</span> ・ ' +
-            (it.cases || 0) + 'ケース（' + (it.pieces || 0) + '個）・ ¥' + (it.amount || 0) +
-        '</div></div>';
+      return '<div class="item-row" style="display:block;">' +
+        '<div class="item-name" style="white-space:normal;">' + escapeHtml(it.name || '') + '</div>' +
+        '<ul style="margin:4px 0 0; padding-left:18px; font-size:11.5px; color:var(--ink-faint); line-height:1.6;">' +
+          '<li>仕入れ先：' + escapeHtml(it.supplier || '') + '</li>' +
+          '<li>JAN：<span class="jan">' + escapeHtml(it.jan || '') + '</span></li>' +
+          '<li>' + (it.cases || 0) + 'ケース（' + (it.pieces || 0) + '個）</li>' +
+          '<li>金額：¥' + (it.amount || 0) + '</li>' +
+        '</ul>' +
+      '</div>';
     }).join('');
     var card = document.getElementById('sendHistoryDetailCard');
     card.style.display = 'block';
