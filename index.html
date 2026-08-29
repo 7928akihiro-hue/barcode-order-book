@@ -125,11 +125,12 @@
     display: flex;
     align-items: baseline;
     gap: 10px;
+    flex-wrap: wrap;
   }
 
   .brand .stamp {
-    width: 44px;
-    height: 44px;
+    width: 52px;
+    height: 52px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -466,16 +467,31 @@
   <header class="appbar">
     <div class="brand">
       <div class="stamp" aria-hidden="true">
-        <svg viewBox="0 0 48 48" width="44" height="44" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 20 L24 6 L44 20 L44 23 L4 23 Z" fill="var(--accent)"/>
-          <rect x="8" y="22" width="32" height="19" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>
-          <circle cx="14" cy="38.5" r="2.2" fill="var(--accent)"/>
-          <circle cx="34" cy="38.5" r="2.2" fill="var(--accent)"/>
-          <rect x="11" y="25" width="26" height="10" rx="2" fill="var(--paper-raised)" stroke="var(--accent)" stroke-width="1.3"/>
-          <text x="24" y="32.6" text-anchor="middle" font-family="'Zen Kaku Gothic New', sans-serif" font-weight="900" font-size="7.2" fill="var(--accent)">発注!!</text>
+        <svg viewBox="0 0 52 52" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 20 L10 9 L42 9 L49 20 Z" fill="var(--accent)"/>
+          <rect x="6" y="19" width="40" height="25" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>
+          <rect x="10" y="31" width="32" height="12" rx="1.5" fill="var(--accent)"/>
+          <line x1="10" y1="34.7" x2="42" y2="34.7" stroke="var(--paper-raised)" stroke-width="1.2"/>
+          <line x1="10" y1="38.3" x2="42" y2="38.3" stroke="var(--paper-raised)" stroke-width="1.2"/>
+          <line x1="10" y1="41.9" x2="42" y2="41.9" stroke="var(--paper-raised)" stroke-width="1.2"/>
+          <rect x="10" y="21.5" width="32" height="8.5" rx="2" fill="var(--paper-raised)" stroke="var(--accent)" stroke-width="1.3"/>
+          <text x="26" y="27.6" text-anchor="middle" font-family="'Zen Kaku Gothic New', sans-serif" font-weight="900" font-size="7.4" fill="var(--accent)">発注!!</text>
         </svg>
       </div>
       <h1>南邦　Warehouse Manager</h1>
+      <div class="stamp" aria-hidden="true">
+        <svg viewBox="0 0 52 52" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="14" width="28" height="20" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>
+          <path d="M32 22 L41 22 L48 29 L48 34 L32 34 Z" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>
+          <rect x="36" y="25" width="7" height="6" rx="1" fill="var(--paper-raised)" stroke="var(--accent)" stroke-width="1"/>
+          <circle cx="13" cy="37" r="4.4" fill="var(--accent)"/>
+          <circle cx="13" cy="37" r="1.7" fill="var(--paper-raised)"/>
+          <circle cx="39" cy="37" r="4.4" fill="var(--accent)"/>
+          <circle cx="39" cy="37" r="1.7" fill="var(--paper-raised)"/>
+          <rect x="7" y="18" width="22" height="10" rx="2" fill="var(--paper-raised)" stroke="var(--accent)" stroke-width="1.3"/>
+          <text x="18" y="25.6" text-anchor="middle" font-family="'Zen Kaku Gothic New', sans-serif" font-weight="900" font-size="6.6" fill="var(--accent)">納品!!</text>
+        </svg>
+      </div>
     </div>
     <p class="tagline">スキャンして数量を集計、仕入れ先ごとにそのまま発注へ。</p>
     <nav class="tabs">
