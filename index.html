@@ -140,6 +140,11 @@
     transform: rotate(-6deg);
   }
 
+  .brand .stamp.stamp-warehouse {
+    width: 70px;
+    height: 70px;
+  }
+
   .brand .stamp.stamp-truck {
     width: 62px;
     height: 50px;
@@ -154,6 +159,8 @@
     margin: 0;
     text-wrap: balance;
   }
+
+  h1 .h1-line1, h1 .h1-line2 { display: block; }
 
   .tagline {
     margin: 4px 0 16px;
@@ -474,8 +481,8 @@
 <div class="device">
   <header class="appbar">
     <div class="brand">
-      <div class="stamp" aria-hidden="true">
-        <svg viewBox="0 0 52 52" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+      <div class="stamp stamp-warehouse" aria-hidden="true">
+        <svg viewBox="0 0 52 52" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
           <path d="M3 20 L10 9 L42 9 L49 20 Z" fill="var(--accent)"/>
           <rect x="6" y="19" width="40" height="25" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>
           <rect x="10" y="31" width="32" height="12" rx="1.5" fill="var(--accent)"/>
@@ -486,7 +493,7 @@
           <text x="26" y="28.9" text-anchor="middle" font-family="'Zen Kaku Gothic New', sans-serif" font-weight="900" font-size="9.8" fill="var(--accent)">発注!!</text>
         </svg>
       </div>
-      <h1>南邦エンタープライズ<br>Warehouse Manager</h1>
+      <h1><span class="h1-line1">南邦エンタープライズ</span><br><span class="h1-line2">Warehouse Manager</span></h1>
       <div class="stamp stamp-truck" aria-hidden="true">
         <svg viewBox="0 0 64 52" width="62" height="50" xmlns="http://www.w3.org/2000/svg">
           <!-- speed lines -->
