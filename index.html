@@ -527,8 +527,9 @@
             <div>発注単位：<span id="stagingCaseQtyInfo"></span></div>
             <div>単価：<span id="stagingPrice"></span></div>
           </div>
-          <label class="field" style="gap:1px;">発注数量
-            <div class="row" style="align-items:center; gap:8px;">
+          <div style="background:var(--accent-soft); border-radius:var(--radius-m); padding:10px 12px 12px;">
+          <label class="field" style="gap:2px; color:var(--accent); font-weight:700;">発注数量
+            <div class="row" style="align-items:center; gap:8px; margin-top:2px;">
               <div style="position:relative; flex:1;">
                 <input type="number" id="stagingCases" inputmode="numeric" min="1" value="1" style="width:100%; padding-right:58px; text-align:left;">
                 <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--ink-soft); font-size:14px; pointer-events:none;">ケース</span>
@@ -539,6 +540,7 @@
               </div>
             </div>
           </label>
+          </div>
           <div class="row">
             <button class="btn primary block" onclick="stagingSubmit()">発注リストに追加</button>
             <button class="btn ghost" onclick="dismissStaging()">今回は無視</button>
