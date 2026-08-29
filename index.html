@@ -725,6 +725,21 @@
         <button class="btn small" onclick="downloadOrderCsv()">発注リスト全体をCSVで保存</button>
         <button class="btn small ghost" onclick="clearOrder()">リストをクリア</button>
       </div>
+
+      <div class="divider-label" style="margin-top:20px;">送信履歴</div>
+      <p class="hint">PCに送信すると、その時点の発注リストがここに記録され、発注リストは空になります。送信済みの内容は確認のみで、修正はできません。</p>
+      <div class="card" id="sendHistoryCard">
+        <div id="sendHistoryList" class="stack"></div>
+      </div>
+
+      <div class="card" id="sendHistoryDetailCard" style="display:none; border-color: var(--accent); margin-top:10px;">
+        <div class="row between" style="margin-bottom:8px;">
+          <span class="chip" style="background:var(--accent-soft); color:var(--accent);">送信済み（修正不可）</span>
+          <span id="sendHistoryDetailDate" class="jan"></span>
+        </div>
+        <div id="sendHistoryDetailItems" class="stack"></div>
+        <button class="btn ghost block" style="margin-top:10px;" onclick="closeSendHistoryDetail()">閉じる</button>
+      </div>
     </section>
   </main>
 </div>
@@ -738,6 +753,7 @@
   /* ---------------- state ---------------- */
   var products = [];   // {jan, itemNo, name, supplier, email, caseQty, price}
   var order = {};      // jan -> {jan, itemNo, name, supplier, email, caseQty, price, cases}
+  var sendHistory = []; // [{sentAt, items}] — read-only record of past PC sends, newest first
   var editingJan = null;
   var recentScans = [];
   var lastScanAt = {};
@@ -758,8 +774,10 @@
     try {
       var p = localStorage.getItem('hachu_products_v1');
       var o = localStorage.getItem('hachu_order_v1');
+      var h = localStorage.getItem('hachu_send_history_v1');
       if (p) products = JSON.parse(p);
       if (o) order = JSON.parse(o);
+      if (h) sendHistory = JSON.parse(h);
     } catch (e) { /* storage unavailable: continue with empty state */ }
     seedProductsOnce();
   }
@@ -778,6 +796,7 @@
     try {
       localStorage.setItem('hachu_products_v1', JSON.stringify(products));
       localStorage.setItem('hachu_order_v1', JSON.stringify(order));
+      localStorage.setItem('hachu_send_history_v1', JSON.stringify(sendHistory));
     } catch (e) { /* best effort only */ }
   }
 
@@ -796,8 +815,11 @@
       document.getElementById('tab-btn-' + n).classList.toggle('active', n === name);
     });
     if (name !== 'scan') { toggleScanner(false); }
-    if (name !== 'order') { document.getElementById('pcSendSettings').style.display = 'none'; }
-    if (name === 'order') { renderOrder(); }
+    if (name !== 'order') {
+      document.getElementById('pcSendSettings').style.display = 'none';
+      closeSendHistoryDetail();
+    }
+    if (name === 'order') { renderOrder(); renderSendHistory(); }
     if (name === 'products') { renderProducts(); }
   }
 
@@ -1058,6 +1080,61 @@
     saveState();
     renderOrder();
     toast('発注リストをクリアしました');
+  }
+
+  // Called once a PC send has actually gone out: the sent snapshot becomes a
+  // permanent, read-only history record, and the working order list is cleared
+  // so the next scan session starts fresh.
+  function recordSendHistoryAndClearOrder(snapshot) {
+    sendHistory.unshift(snapshot);
+    sendHistory = sendHistory.slice(0, 50);
+    order = {};
+    saveState();
+    renderOrder();
+    renderSendHistory();
+  }
+
+  function renderSendHistory() {
+    var el = document.getElementById('sendHistoryList');
+    if (!el) return;
+    if (sendHistory.length === 0) {
+      el.innerHTML = '<div class="empty">まだ送信履歴がありません</div>';
+      return;
+    }
+    el.innerHTML = sendHistory.map(function (h, idx) {
+      var d = new Date(h.sentAt);
+      var label = pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+      var pieces = h.items.reduce(function (s, it) { return s + (it.pieces || 0); }, 0);
+      return '<div class="item-row" style="cursor:pointer;" onclick="openSendHistoryDetail(' + idx + ')">' +
+        '<div class="item-main">' +
+          '<div class="item-name">' + escapeHtml(label) + '　送信済み</div>' +
+          '<div class="item-sub">' + h.items.length + '品目 ・ 計' + pieces + '個</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function openSendHistoryDetail(idx) {
+    var h = sendHistory[idx];
+    if (!h) return;
+    var d = new Date(h.sentAt);
+    document.getElementById('sendHistoryDetailDate').textContent =
+      pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' 送信';
+    document.getElementById('sendHistoryDetailItems').innerHTML = h.items.map(function (it) {
+      return '<div class="item-row">' +
+        '<div class="item-main">' +
+          '<div class="item-name">' + escapeHtml(it.name || '') + '</div>' +
+          '<div class="item-sub">' + escapeHtml(it.supplier || '') + ' ・ <span class="jan">' + escapeHtml(it.jan || '') + '</span> ・ ' +
+            (it.cases || 0) + 'ケース（' + (it.pieces || 0) + '個）・ ¥' + (it.amount || 0) +
+        '</div></div>';
+    }).join('');
+    var card = document.getElementById('sendHistoryDetailCard');
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function closeSendHistoryDetail() {
+    document.getElementById('sendHistoryDetailCard').style.display = 'none';
   }
 
   function groupOrderBySupplier() {
@@ -1518,6 +1595,7 @@
       btn.disabled = false;
       btn.textContent = 'たまったデータをPCに送信';
       resetScanFeed();
+      recordSendHistoryAndClearOrder(snapshot);
     }).catch(function (err) {
       btn.disabled = false;
       btn.textContent = 'たまったデータをPCに送信';
@@ -1561,6 +1639,7 @@
         chip.style.background = 'var(--success-soft)';
         chip.style.color = 'var(--success)';
         resetScanFeed();
+        recordSendHistoryAndClearOrder(snapshot);
       } else {
         toast('送信を開始できませんでした。もう一度お試しください');
         chip.textContent = '失敗（送信を開始できませんでした）';
@@ -1605,6 +1684,7 @@
   loadState();
   renderProducts();
   renderOrder();
+  renderSendHistory();
   document.getElementById('scanFeed').innerHTML = '<div class="empty">まだ読み取り履歴がありません</div>';
 </script>
 
