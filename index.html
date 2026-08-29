@@ -731,6 +731,7 @@
       document.getElementById('tab-btn-' + n).classList.toggle('active', n === name);
     });
     if (name !== 'scan') { toggleScanner(false); }
+    if (name !== 'order') { document.getElementById('pcSendSettings').style.display = 'none'; }
     if (name === 'order') { renderOrder(); }
     if (name === 'products') { renderProducts(); }
   }
