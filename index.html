@@ -116,6 +116,9 @@
   header.appbar {
     padding: 20px 20px 0;
     background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
   .brand {
@@ -485,6 +488,8 @@
   <main>
     <!-- ================= SCAN SCREEN ================= -->
     <section id="screen-scan" class="screen active">
+      <div class="scan-status" id="scanStatus">バーコードを商品マスタと照合します</div>
+
       <div class="card" id="scannerCollapsed" style="text-align:center;">
         <button class="btn primary" style="width:100%; padding:14px; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="toggleScanner(true)">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="flex:none;">
@@ -499,7 +504,7 @@
           </svg>
           スキャン開始
         </button>
-        <p class="hint" style="margin:8px 0 0;">普段はカメラを閉じておき、スキャンする時だけここを押して起動します。</p>
+        <p class="hint" style="margin:8px 0 0;">このボタンを押してJAN/バーコードをカメラでスキャン。</p>
       </div>
 
       <div class="scanner" id="scannerBox" style="display:none;">
@@ -508,8 +513,6 @@
         <div class="idle-msg" id="scannerIdleMsg">カメラを起動して読み取りを開始します</div>
       </div>
       <button class="btn ghost" id="scannerCloseBtn" style="display:none; width:100%; margin-bottom:14px;" onclick="toggleScanner(false)">スキャンを終了</button>
-
-      <div class="scan-status" id="scanStatus">バーコードを商品マスタと照合します</div>
 
       <div class="card" id="scanStagingCard" style="display:none; border-color: var(--accent);">
         <div class="row between" style="margin-bottom:8px;">
@@ -551,7 +554,7 @@
             <button class="btn primary" onclick="handleManualAdd()">追加</button>
           </div>
         </label>
-        <p class="hint" style="margin:8px 0 0;">カメラが使えない端末・お使いのブラウザが未対応の場合はこちらから入力してください。</p>
+        <p class="hint" style="margin:8px 0 0;">読み取りエラーの場合はこちらに直接入力。</p>
       </div>
 
       <div class="card" id="quickRegisterCard" style="display:none; border-color: var(--warning);">
@@ -587,7 +590,11 @@
       <h2 class="section-title">商品マスタ <span class="count" id="productCount">0件</span></h2>
       <p class="hint">最初にスキャン対象の商品を登録してください。JANコード・品番・商品名・仕入れ先・仕入れ先メール・発注単位（1ケースの個数）・単価を登録します。スキャン1回で1ケース分が発注リストに追加されます。</p>
 
-      <div class="card">
+      <div class="card" id="productFormCollapsed" style="text-align:center;">
+        <button class="btn primary block" onclick="toggleProductForm(true)">＋ 商品を登録</button>
+      </div>
+
+      <div class="card" id="productFormCard" style="display:none;">
         <div class="stack">
           <label class="field">JANコード <input type="text" id="pJan" inputmode="numeric" placeholder="4901234567894"></label>
           <label class="field">商品名 <input type="text" id="pName" placeholder="○○ 500ml"></label>
@@ -616,6 +623,7 @@
             <button class="btn small" onclick="exportProductsCsv()">商品マスタをCSVで書き出す</button>
           </div>
         </details>
+        <button class="btn ghost block" style="margin-top:10px;" onclick="toggleProductForm(false)">閉じる</button>
       </div>
 
       <div class="divider-label">登録済みの商品</div>
@@ -757,6 +765,12 @@
     toast(existing ? '商品を更新しました' : '商品を登録しました');
   }
 
+  function toggleProductForm(open) {
+    document.getElementById('productFormCollapsed').style.display = open ? 'none' : 'block';
+    document.getElementById('productFormCard').style.display = open ? 'block' : 'none';
+    if (!open) { resetProductForm(); }
+  }
+
   function resetProductForm() {
     editingJan = null;
     document.getElementById('pJan').value = '';
@@ -783,6 +797,8 @@
     document.getElementById('pEmail').value = p.email || '';
     document.getElementById('productSubmitBtn').textContent = '更新を保存';
     document.getElementById('productDeleteBtn').style.display = 'inline-block';
+    document.getElementById('productFormCollapsed').style.display = 'none';
+    document.getElementById('productFormCard').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -795,6 +811,9 @@
 
   function deleteEditingProduct() {
     if (!editingJan) return;
+    var p = findProduct(editingJan);
+    var name = p ? p.name : '';
+    if (!confirm('「' + name + '」を本当に削除してもよろしいですか？\nこの操作は取り消せません。')) return;
     deleteProduct(editingJan);
     resetProductForm();
   }
@@ -1142,6 +1161,7 @@
       saveState();
       dismissStaging();
       setStatus('数量を修正しました：' + product.name + '　' + cases + 'ケース', 'ok');
+      addScanFeedEntry(product.name + '　数量を' + cases + 'ケースに修正', true, jan);
       return;
     }
     addToOrder(product, cases);
@@ -1359,7 +1379,7 @@
     if (!url) { toast('URLを入力してください'); return; }
     try { localStorage.setItem(PC_SEND_URL_KEY, url); } catch (e) { toast('この端末では保存できませんでした'); return; }
     toast('送信先を保存しました（' + url.length + '文字）');
-    document.getElementById('pcSendUrlInfo').textContent = '保存済み：' + url.length + '文字';
+    document.getElementById('pcSendSettings').style.display = 'none';
   }
 
   function sendToPC() {
