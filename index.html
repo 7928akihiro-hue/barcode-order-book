@@ -1436,6 +1436,31 @@
     var jsonUtf8 = JSON.stringify(snapshot);
     var base64Body = btoa(unescape(encodeURIComponent(jsonUtf8)));
 
+    // sendBeacon is a fire-and-forget POST built for exactly this ("send this, I don't need
+    // to read a response") and is far more reliable across mobile browsers than fetch() here,
+    // which some Android Chrome builds fail on with "Failed to fetch" for this cross-origin
+    // redirecting endpoint. We can't confirm server-side success this way, only that the
+    // browser accepted the request for sending.
+    if (navigator.sendBeacon) {
+      var blob = new Blob([base64Body], { type: 'text/plain;charset=utf-8' });
+      var queued = navigator.sendBeacon(url, blob);
+      btn.disabled = false;
+      btn.textContent = 'たまったデータをPCに送信';
+      if (queued) {
+        toast('PCに送信しました（Google Driveに届くまで数秒かかることがあります）');
+        chip.textContent = '送信済み ' + pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+        chip.style.background = 'var(--success-soft)';
+        chip.style.color = 'var(--success)';
+        resetScanFeed();
+      } else {
+        toast('送信を開始できませんでした。もう一度お試しください');
+        chip.textContent = '失敗（送信を開始できませんでした）';
+        chip.style.background = 'var(--warning-soft)';
+        chip.style.color = 'var(--warning)';
+      }
+      return;
+    }
+
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain avoids a CORS preflight that Apps Script can't answer
