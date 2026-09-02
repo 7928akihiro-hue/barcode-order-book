@@ -704,20 +704,20 @@
       <div id="orderGroups"></div>
       <div class="card" style="margin-top:4px; border-color: var(--accent);">
         <div class="row between" style="margin-bottom:6px;">
-          <span style="font-family:'Zen Kaku Gothic New',sans-serif; font-weight:700; font-size:13px;">PCへ送信</span>
+          <span style="font-family:'Zen Kaku Gothic New',sans-serif; font-weight:700; font-size:13px;">発注書メール送信</span>
           <span class="chip" id="pcSendStatusChip" style="background:var(--paper-sunken); color:var(--ink-faint);">未送信</span>
         </div>
-        <p class="hint" style="margin-bottom:10px;">たまった発注データをGoogle Driveへ送ります。PC側（Claude）でそのデータから発注書を自動作成できます。</p>
-        <button class="btn primary block" onclick="sendToPC()" id="sendToPcBtn">たまったデータをPCに送信</button>
+        <p class="hint" style="margin-bottom:10px;">たまった発注データから発注書Excelを自動作成し、下の宛先にメールで送ります。</p>
+        <button class="btn primary block" onclick="sendToPC()" id="sendToPcBtn">発注書をメールで送信</button>
         <div style="text-align:center; margin-top:6px;">
           <button class="btn ghost" style="font-size:11px; padding:4px 10px;" onclick="togglePcSendSettings()">送信先の設定</button>
         </div>
         <div id="pcSendSettings" style="display:none; margin-top:10px;">
-          <label class="field">送信先URL（Google Apps ScriptのWebアプリURL）
-            <input type="text" id="pcSendUrl" placeholder="https://script.google.com/macros/s/…/exec">
+          <label class="field">送信先メールアドレス
+            <input type="email" id="pcSendEmail" placeholder="例）a-watanabe@nanpou-ep.co.jp">
           </label>
-          <p class="hint" id="pcSendUrlInfo" style="margin:4px 0 0;"></p>
-          <button class="btn small block" style="margin-top:6px;" onclick="savePcSendUrl()">保存</button>
+          <p class="hint" id="pcSendEmailInfo" style="margin:4px 0 0;"></p>
+          <button class="btn small block" style="margin-top:6px;" onclick="savePcSendEmail()">保存</button>
         </div>
       </div>
 
@@ -1617,10 +1617,13 @@
   /* ---------------- send accumulated order data to PC (via Google Drive) ---------------- */
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
-  var PC_SEND_URL_KEY = 'pcSendWebhookUrl';
+  // Baked in so the app works on any device with zero setup — nobody needs to
+  // know about or paste the Google Apps Script project URL.
+  var PC_SEND_URL = 'https://script.google.com/macros/s/AKfycbzrxg6anqPjWRpGKFU0flJHTTAt1V2D7ENq21EBOzNgrESCRAbuWyvNlgPWvCp02DT_/exec';
+  var PC_SEND_EMAIL_KEY = 'pcSendEmail';
 
-  function getPcSendUrl() {
-    try { return localStorage.getItem(PC_SEND_URL_KEY) || ''; } catch (e) { return ''; }
+  function getPcSendEmail() {
+    try { return localStorage.getItem(PC_SEND_EMAIL_KEY) || ''; } catch (e) { return ''; }
   }
 
   function togglePcSendSettings() {
@@ -1628,17 +1631,17 @@
     var opening = el.style.display !== 'block';
     el.style.display = opening ? 'block' : 'none';
     if (opening) {
-      var saved = getPcSendUrl();
-      document.getElementById('pcSendUrl').value = saved;
-      document.getElementById('pcSendUrlInfo').textContent = saved ? '保存済み：' + saved.length + '文字' : '未設定';
+      var saved = getPcSendEmail();
+      document.getElementById('pcSendEmail').value = saved;
+      document.getElementById('pcSendEmailInfo').textContent = saved ? '保存済み：' + saved : '未設定（既定の宛先に届きます）';
     }
   }
 
-  function savePcSendUrl() {
-    var url = document.getElementById('pcSendUrl').value.trim();
-    if (!url) { toast('URLを入力してください'); return; }
-    try { localStorage.setItem(PC_SEND_URL_KEY, url); } catch (e) { toast('この端末では保存できませんでした'); return; }
-    toast('送信先を保存しました（' + url.length + '文字）');
+  function savePcSendEmail() {
+    var email = document.getElementById('pcSendEmail').value.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('正しいメールアドレスを入力してください'); return; }
+    try { localStorage.setItem(PC_SEND_EMAIL_KEY, email); } catch (e) { toast('この端末では保存できませんでした'); return; }
+    toast(email ? '送信先を保存しました：' + email : '送信先をクリアしました');
     document.getElementById('pcSendSettings').style.display = 'none';
   }
 
@@ -1656,12 +1659,7 @@
 
     if (mcpNS) { sendToPCviaDrive(items); return; }
 
-    var webhookUrl = getPcSendUrl();
-    if (webhookUrl) { sendToPCviaWebhook(items, webhookUrl); return; }
-
-    toast('送信先が未設定です。「送信先の設定」からURLを登録してください');
-    document.getElementById('pcSendSettings').style.display = 'block';
-    document.getElementById('pcSendUrl').focus();
+    sendToPCviaWebhook(items, PC_SEND_URL);
   }
 
   function sendToPCviaDrive(items) {
@@ -1711,7 +1709,7 @@
     btn.textContent = '送信中…';
 
     var now = new Date();
-    var snapshot = { sentAt: now.toISOString(), items: items };
+    var snapshot = { sentAt: now.toISOString(), items: items, recipientEmail: getPcSendEmail() };
     // Base64-encode the UTF-8 JSON so the POST body is pure ASCII: Apps Script's
     // e.postData.contents mangles multi-byte (Japanese) text, but base64 text survives intact.
     var jsonUtf8 = JSON.stringify(snapshot);
