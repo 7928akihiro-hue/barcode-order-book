@@ -579,7 +579,7 @@
 
       <div class="card" id="scanStagingCard" style="display:none; border-color: var(--accent);">
         <div class="row between" style="margin-bottom:8px;">
-          <span class="chip" style="background:var(--accent-soft); color:var(--accent);">読み取りました</span>
+          <span class="chip" id="stagingChip" style="background:var(--accent-soft); color:var(--accent);">読み取りました</span>
         </div>
         <div class="stack">
           <div class="jan" id="stagingJan" style="font-size:26px; font-weight:700; color:var(--ink);"></div>
@@ -605,7 +605,7 @@
           </label>
           </div>
           <div class="row">
-            <button class="btn primary block" onclick="stagingSubmit()">発注リストに追加</button>
+            <button class="btn primary block" id="stagingSubmitBtn" onclick="stagingSubmit()">発注リストに追加</button>
             <button class="btn ghost" onclick="dismissStaging()">今回は無視</button>
           </div>
         </div>
@@ -1338,8 +1338,15 @@
     }
     var product = findProduct(jan);
     if (product) {
-      showScanStaging(product);
-      setStatus('読み取りました：' + product.name + '　数量を確認して追加してください', 'ok');
+      var existing = order[jan];
+      if (existing) {
+        showScanStaging(product, existing.cases, 'duplicate');
+        setStatus('⚠ 同じ商品が既に発注リストにあります（現在' + existing.cases + 'ケース）。数量を確認・訂正してください', 'warn');
+        addScanFeedEntry(product.name + '　※重複スキャン（現在' + existing.cases + 'ケース）', false, jan);
+      } else {
+        showScanStaging(product);
+        setStatus('読み取りました：' + product.name + '　数量を確認して追加してください', 'ok');
+      }
     } else {
       setStatus('未登録のバーコードです：下でそのまま登録できます', 'warn');
       showQuickRegister(jan);
@@ -1356,8 +1363,31 @@
     document.getElementById('stagingPrice').textContent = '¥' + (product.price || 0);
     document.getElementById('stagingCases').value = cases || 1;
     var card = document.getElementById('scanStagingCard');
+    var isDuplicate = mode === 'duplicate';
+    var effectiveMode = isDuplicate ? 'edit' : (mode || 'add');
     card.dataset.jan = product.jan;
-    card.dataset.mode = mode || 'add';
+    card.dataset.mode = effectiveMode;
+    var chip = document.getElementById('stagingChip');
+    var btn = document.getElementById('stagingSubmitBtn');
+    if (isDuplicate) {
+      card.style.borderColor = 'var(--warning)';
+      chip.textContent = '⚠ 重複スキャン：数量を訂正してください';
+      chip.style.background = 'var(--warning-soft)';
+      chip.style.color = 'var(--warning)';
+      btn.textContent = '数量を訂正する';
+    } else if (effectiveMode === 'edit') {
+      card.style.borderColor = 'var(--accent)';
+      chip.textContent = '数量を訂正';
+      chip.style.background = 'var(--accent-soft)';
+      chip.style.color = 'var(--accent)';
+      btn.textContent = '数量を訂正する';
+    } else {
+      card.style.borderColor = 'var(--accent)';
+      chip.textContent = '読み取りました';
+      chip.style.background = 'var(--accent-soft)';
+      chip.style.color = 'var(--accent)';
+      btn.textContent = '発注リストに追加';
+    }
     card.style.display = 'block';
     document.getElementById('manualAddCard').style.display = 'none';
     document.getElementById('scannerCollapsed').style.display = 'none';
