@@ -214,6 +214,15 @@
     box-shadow: var(--shadow);
   }
 
+  nav.tabs .settings-btn {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: end;
+    font-size: 16px;
+    padding: 5px 12px;
+    margin-top: 2px;
+  }
+
   nav.tabs button:focus-visible,
   button:focus-visible,
   input:focus-visible,
@@ -545,6 +554,7 @@
       <button id="tab-btn-scan" class="active" onclick="showScreen('scan')">スキャン発注</button>
       <button id="tab-btn-products" onclick="showScreen('products')">商品マスタ</button>
       <button id="tab-btn-order" onclick="showScreen('order')">発注リスト</button>
+      <button id="tab-btn-settings" class="settings-btn" onclick="showScreen('settings')" aria-label="設定" title="設定">⚙️</button>
     </nav>
   </header>
 
@@ -709,16 +719,6 @@
         </div>
         <p class="hint" style="margin-bottom:10px;">たまった発注データから発注書Excelを自動作成し、下の宛先にメールで送ります。</p>
         <button class="btn primary block" onclick="sendToPC()" id="sendToPcBtn">発注書をメールで送信</button>
-        <div style="text-align:center; margin-top:6px;">
-          <button class="btn ghost" style="font-size:11px; padding:4px 10px;" onclick="togglePcSendSettings()">送信先の設定</button>
-        </div>
-        <div id="pcSendSettings" style="display:none; margin-top:10px;">
-          <label class="field">送信先メールアドレス
-            <input type="email" id="pcSendEmail" placeholder="例）a-watanabe@nanpou-ep.co.jp">
-          </label>
-          <p class="hint" id="pcSendEmailInfo" style="margin:4px 0 0;"></p>
-          <button class="btn small block" style="margin-top:6px;" onclick="savePcSendEmail()">保存</button>
-        </div>
       </div>
 
       <div class="row" style="margin-top:14px;">
@@ -749,6 +749,19 @@
         </div>
         <div id="sendHistorySupplierItems" class="stack"></div>
         <button class="btn ghost block" style="margin-top:10px;" onclick="closeSendHistorySupplierDetail()">戻る</button>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS SCREEN ================= -->
+    <section id="screen-settings" class="screen">
+      <h2 class="section-title">設定</h2>
+      <div class="card" style="border-color: var(--accent);">
+        <p class="hint" style="margin-bottom:10px;">「発注書メール送信」で使う宛先です。ここに登録したメールアドレスに発注書のExcelが届きます。</p>
+        <label class="field">送信先メールアドレス
+          <input type="email" id="pcSendEmail" placeholder="例）a-watanabe@nanpou-ep.co.jp">
+        </label>
+        <p class="hint" id="pcSendEmailInfo" style="margin:4px 0 0;"></p>
+        <button class="btn primary block" style="margin-top:10px;" onclick="savePcSendEmail()">保存</button>
       </div>
     </section>
   </main>
@@ -820,17 +833,15 @@
 
   /* ---------------- tabs ---------------- */
   function showScreen(name) {
-    ['scan', 'products', 'order'].forEach(function (n) {
+    ['scan', 'products', 'order', 'settings'].forEach(function (n) {
       document.getElementById('screen-' + n).classList.toggle('active', n === name);
       document.getElementById('tab-btn-' + n).classList.toggle('active', n === name);
     });
     if (name !== 'scan') { toggleScanner(false); }
-    if (name !== 'order') {
-      document.getElementById('pcSendSettings').style.display = 'none';
-      closeSendHistoryDetail();
-    }
+    if (name !== 'order') { closeSendHistoryDetail(); }
     if (name === 'order') { renderOrder(); renderSendHistory(); }
     if (name === 'products') { renderProducts(); }
+    if (name === 'settings') { populateSettingsScreen(); }
   }
 
   /* ---------------- products ---------------- */
@@ -1626,15 +1637,10 @@
     try { return localStorage.getItem(PC_SEND_EMAIL_KEY) || ''; } catch (e) { return ''; }
   }
 
-  function togglePcSendSettings() {
-    var el = document.getElementById('pcSendSettings');
-    var opening = el.style.display !== 'block';
-    el.style.display = opening ? 'block' : 'none';
-    if (opening) {
-      var saved = getPcSendEmail();
-      document.getElementById('pcSendEmail').value = saved;
-      document.getElementById('pcSendEmailInfo').textContent = saved ? '保存済み：' + saved : '未設定（既定の宛先に届きます）';
-    }
+  function populateSettingsScreen() {
+    var saved = getPcSendEmail();
+    document.getElementById('pcSendEmail').value = saved;
+    document.getElementById('pcSendEmailInfo').textContent = saved ? '保存済み：' + saved : '未設定（既定の宛先に届きます）';
   }
 
   function savePcSendEmail() {
@@ -1642,7 +1648,7 @@
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('正しいメールアドレスを入力してください'); return; }
     try { localStorage.setItem(PC_SEND_EMAIL_KEY, email); } catch (e) { toast('この端末では保存できませんでした'); return; }
     toast(email ? '送信先を保存しました：' + email : '送信先をクリアしました');
-    document.getElementById('pcSendSettings').style.display = 'none';
+    populateSettingsScreen();
   }
 
   function sendToPC() {
