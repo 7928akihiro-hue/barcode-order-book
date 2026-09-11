@@ -214,12 +214,11 @@
     box-shadow: var(--shadow);
   }
 
-  nav.tabs .settings-btn {
-    grid-column: 3;
+  nav.tabs .sub-btn {
     grid-row: 2;
     justify-self: end;
-    font-size: 16px;
-    padding: 5px 12px;
+    font-size: 12px;
+    padding: 6px 10px;
     margin-top: 2px;
   }
 
@@ -554,7 +553,8 @@
       <button id="tab-btn-scan" class="active" onclick="showScreen('scan')">スキャン発注</button>
       <button id="tab-btn-products" onclick="showScreen('products')">商品マスタ</button>
       <button id="tab-btn-order" onclick="showScreen('order')">発注リスト</button>
-      <button id="tab-btn-settings" class="settings-btn" onclick="showScreen('settings')" aria-label="設定" title="設定">⚙️</button>
+      <button id="tab-btn-incoming" class="sub-btn" style="grid-column:2;" onclick="showScreen('incoming')">入荷スキャン</button>
+      <button id="tab-btn-settings" class="sub-btn" style="grid-column:3;" onclick="showScreen('settings')">設定</button>
     </nav>
   </header>
 
@@ -752,6 +752,14 @@
       </div>
     </section>
 
+    <!-- ================= INCOMING SCAN SCREEN ================= -->
+    <section id="screen-incoming" class="screen">
+      <h2 class="section-title">入荷スキャン</h2>
+      <div class="card">
+        <p class="hint">この画面は準備中です。仕様が決まり次第、機能を追加します。</p>
+      </div>
+    </section>
+
     <!-- ================= SETTINGS SCREEN ================= -->
     <section id="screen-settings" class="screen">
       <h2 class="section-title">設定</h2>
@@ -833,7 +841,7 @@
 
   /* ---------------- tabs ---------------- */
   function showScreen(name) {
-    ['scan', 'products', 'order', 'settings'].forEach(function (n) {
+    ['scan', 'products', 'order', 'incoming', 'settings'].forEach(function (n) {
       document.getElementById('screen-' + n).classList.toggle('active', n === name);
       document.getElementById('tab-btn-' + n).classList.toggle('active', n === name);
     });
