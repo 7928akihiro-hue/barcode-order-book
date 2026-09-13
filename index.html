@@ -216,9 +216,10 @@
 
   nav.tabs .sub-btn {
     grid-row: 2;
-    justify-self: end;
+    justify-self: stretch;
+    text-align: center;
     font-size: 12px;
-    padding: 6px 10px;
+    padding: 6px 4px;
     margin-top: 2px;
   }
 
@@ -553,8 +554,8 @@
       <button id="tab-btn-scan" class="active" onclick="showScreen('scan')">スキャン発注</button>
       <button id="tab-btn-products" onclick="showScreen('products')">商品マスタ</button>
       <button id="tab-btn-order" onclick="showScreen('order')">発注リスト</button>
-      <button id="tab-btn-incoming" class="sub-btn" style="grid-column:2;" onclick="showScreen('incoming')">入荷スキャン</button>
-      <button id="tab-btn-settings" class="sub-btn" style="grid-column:3;" onclick="showScreen('settings')">設定</button>
+      <button id="tab-btn-incoming" class="sub-btn" style="grid-column:1;" onclick="showScreen('incoming')">入荷スキャン</button>
+      <button id="tab-btn-settings" class="sub-btn" style="grid-column:2;" onclick="showScreen('settings')">設定</button>
     </nav>
   </header>
 
