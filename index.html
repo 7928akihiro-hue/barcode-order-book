@@ -601,6 +601,7 @@
             <div>発注単位：<span id="stagingCaseQtyInfo"></span></div>
             <div>単価：<span id="stagingPrice"></span></div>
           </div>
+          <p class="hint" id="stagingPriceChange" style="margin:2px 0 0; display:none; color:var(--accent);"></p>
           <div style="background:var(--accent-soft); border-radius:var(--radius-m); padding:10px 12px 12px;">
           <label class="field" style="gap:2px; color:var(--accent); font-weight:700;">発注数量
             <div class="row" style="align-items:center; gap:8px; margin-top:2px;">
@@ -872,6 +873,13 @@
 
     var existing = findProduct(jan);
     if (existing) {
+      var oldPrice = existing.price || 0;
+      if (price !== oldPrice) {
+        var now = new Date();
+        var dateStr = now.getFullYear() + '/' + pad2(now.getMonth() + 1) + '/' + pad2(now.getDate());
+        if (!existing.priceHistory) existing.priceHistory = [];
+        existing.priceHistory.push({ date: dateStr, from: oldPrice, to: price });
+      }
       existing.itemNo = itemNo; existing.name = name; existing.supplier = supplier;
       existing.caseQty = caseQty; existing.price = price; existing.email = email;
     } else {
@@ -949,10 +957,16 @@
     }
     var sorted = products.slice().sort(function (a, b) { return a.supplier.localeCompare(b.supplier, 'ja'); });
     list.innerHTML = sorted.map(function (p) {
+      var priceChangeLine = '';
+      if (p.priceHistory && p.priceHistory.length) {
+        var latest = p.priceHistory[p.priceHistory.length - 1];
+        priceChangeLine = '<div class="item-sub" style="color:var(--accent);">単価変更：' + latest.date + '　¥' + latest.from + '→¥' + latest.to + '</div>';
+      }
       return '<div class="item-row">' +
         '<div class="item-main">' +
           '<div class="item-name">' + escapeHtml(p.name) + '</div>' +
           '<div class="item-sub">' + (p.itemNo ? escapeHtml(p.itemNo) + ' ・ ' : '') + '<span class="jan">' + escapeHtml(p.jan) + '</span> ・ ' + escapeHtml(p.supplier) + ' ・ 発注単位' + (p.caseQty || 1) + ' ・ ¥' + (p.price || 0) + '</div>' +
+          priceChangeLine +
         '</div>' +
         '<button class="btn small" onclick="editProduct(\'' + p.jan + '\')">編集</button>' +
       '</div>';
@@ -1381,6 +1395,14 @@
     document.getElementById('stagingSupplier').textContent = product.supplier || '－';
     document.getElementById('stagingCaseQtyInfo').textContent = (product.caseQty || 1) + '個';
     document.getElementById('stagingPrice').textContent = '¥' + (product.price || 0);
+    var priceChangeEl = document.getElementById('stagingPriceChange');
+    if (product.priceHistory && product.priceHistory.length) {
+      var latestChange = product.priceHistory[product.priceHistory.length - 1];
+      priceChangeEl.textContent = '単価変更：' + latestChange.date + '　¥' + latestChange.from + '→¥' + latestChange.to;
+      priceChangeEl.style.display = 'block';
+    } else {
+      priceChangeEl.style.display = 'none';
+    }
     document.getElementById('stagingCases').value = cases || 1;
     var card = document.getElementById('scanStagingCard');
     var isDuplicate = mode === 'duplicate';
