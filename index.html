@@ -579,6 +579,7 @@
       <button id="tab-btn-order" onclick="showScreen('order')">発注リスト</button>
       <button id="tab-btn-incoming" class="sub-btn" style="grid-column:1;" onclick="showScreen('incoming')">入荷スキャン</button>
       <button id="tab-btn-settings" class="sub-btn" style="grid-column:2;" onclick="showScreen('settings')">設定</button>
+      <button id="tab-btn-partners" class="sub-btn" style="grid-column:3;" onclick="showScreen('partners')">取引先マスタ</button>
     </nav>
   </header>
 
@@ -806,6 +807,13 @@
         <button class="btn primary block" style="margin-top:10px;" onclick="savePcSendFromEmail()">保存</button>
       </div>
     </section>
+
+    <!-- ================= PARTNERS SCREEN ================= -->
+    <section id="screen-partners" class="screen">
+      <h2 class="section-title">取引先マスタ <span class="count" id="partnerCount">0件</span></h2>
+      <p class="hint">商品マスタに新しい仕入れ先を登録すると、ここに自動で追加されます。担当者名・連絡先などを入力して保存してください。</p>
+      <div id="partnerList" class="stack"></div>
+    </section>
   </main>
 </div>
 
@@ -817,6 +825,7 @@
 <script>
   /* ---------------- state ---------------- */
   var products = [];   // {jan, itemNo, name, supplier, email, caseQty, price}
+  var partners = [];   // {name, contact, tel, fax, email, hqAddress, warehouseAddress} — auto-created per supplier
   var order = {};      // jan -> {jan, itemNo, name, supplier, email, caseQty, price, cases}
   var sendHistory = []; // [{sentAt, items}] — read-only record of past PC sends, newest first
   var editingJan = null;
@@ -840,11 +849,16 @@
       var p = localStorage.getItem('hachu_products_v1');
       var o = localStorage.getItem('hachu_order_v1');
       var h = localStorage.getItem('hachu_send_history_v1');
+      var pt = localStorage.getItem('hachu_partners_v1');
       if (p) products = JSON.parse(p);
       if (o) order = JSON.parse(o);
       if (h) sendHistory = JSON.parse(h);
+      if (pt) partners = JSON.parse(pt);
     } catch (e) { /* storage unavailable: continue with empty state */ }
     seedProductsOnce();
+    // Backfill: products registered before 取引先マスタ existed still get an entry.
+    products.forEach(function (p) { ensurePartner(p.supplier); });
+    saveState();
   }
 
   function seedProductsOnce() {
@@ -862,7 +876,61 @@
       localStorage.setItem('hachu_products_v1', JSON.stringify(products));
       localStorage.setItem('hachu_order_v1', JSON.stringify(order));
       localStorage.setItem('hachu_send_history_v1', JSON.stringify(sendHistory));
+      localStorage.setItem('hachu_partners_v1', JSON.stringify(partners));
     } catch (e) { /* best effort only */ }
+  }
+
+  // Auto-creates a blank 取引先マスタ record the first time a supplier name is
+  // seen from product registration (manual form, quick-register, or CSV import).
+  function ensurePartner(name) {
+    if (!name) return;
+    for (var i = 0; i < partners.length; i++) {
+      if (partners[i].name === name) return;
+    }
+    partners.push({ name: name, contact: '', tel: '', fax: '', email: '', hqAddress: '', warehouseAddress: '' });
+  }
+
+  function findPartner(name) {
+    for (var i = 0; i < partners.length; i++) if (partners[i].name === name) return partners[i];
+    return null;
+  }
+
+  function renderPartners() {
+    var list = document.getElementById('partnerList');
+    document.getElementById('partnerCount').textContent = partners.length + '件';
+    if (partners.length === 0) {
+      list.innerHTML = '<div class="empty">まだ取引先がありません。商品マスタで商品を登録すると、その仕入れ先が自動でここに追加されます。</div>';
+      return;
+    }
+    var sorted = partners.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+    list.innerHTML = sorted.map(function (pt, idx) {
+      var safeName = escapeHtml(pt.name).replace(/'/g, '&#39;');
+      return '<div class="card">' +
+        '<div class="item-name" style="font-weight:700; font-size:15px; margin-bottom:8px;">' + escapeHtml(pt.name) + '</div>' +
+        '<div class="field-grid">' +
+          '<label class="field">担当者名 <input type="text" id="ptContact_' + idx + '" value="' + escapeHtml(pt.contact || '') + '"></label>' +
+          '<label class="field">TEL <input type="text" id="ptTel_' + idx + '" value="' + escapeHtml(pt.tel || '') + '"></label>' +
+          '<label class="field">FAX <input type="text" id="ptFax_' + idx + '" value="' + escapeHtml(pt.fax || '') + '"></label>' +
+          '<label class="field">アドレス <input type="email" id="ptEmail_' + idx + '" value="' + escapeHtml(pt.email || '') + '"></label>' +
+        '</div>' +
+        '<label class="field" style="margin-top:8px;">本社住所 <input type="text" id="ptHq_' + idx + '" value="' + escapeHtml(pt.hqAddress || '') + '"></label>' +
+        '<label class="field" style="margin-top:8px;">倉庫住所 <input type="text" id="ptWarehouse_' + idx + '" value="' + escapeHtml(pt.warehouseAddress || '') + '"></label>' +
+        '<button class="btn small block" style="margin-top:10px;" onclick="savePartner(\'' + safeName + '\', ' + idx + ')">保存</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function savePartner(name, idx) {
+    var pt = findPartner(name);
+    if (!pt) return;
+    pt.contact = document.getElementById('ptContact_' + idx).value.trim();
+    pt.tel = document.getElementById('ptTel_' + idx).value.trim();
+    pt.fax = document.getElementById('ptFax_' + idx).value.trim();
+    pt.email = document.getElementById('ptEmail_' + idx).value.trim();
+    pt.hqAddress = document.getElementById('ptHq_' + idx).value.trim();
+    pt.warehouseAddress = document.getElementById('ptWarehouse_' + idx).value.trim();
+    saveState();
+    toast(name + ' の情報を保存しました');
   }
 
   function toast(msg) {
@@ -875,7 +943,7 @@
 
   /* ---------------- tabs ---------------- */
   function showScreen(name) {
-    ['scan', 'products', 'order', 'incoming', 'settings'].forEach(function (n) {
+    ['scan', 'products', 'order', 'incoming', 'settings', 'partners'].forEach(function (n) {
       document.getElementById('screen-' + n).classList.toggle('active', n === name);
       document.getElementById('tab-btn-' + n).classList.toggle('active', n === name);
     });
@@ -884,6 +952,7 @@
     if (name === 'order') { renderOrder(); renderSendHistory(); }
     if (name === 'products') { renderProducts(); }
     if (name === 'settings') { populateSettingsScreen(); }
+    if (name === 'partners') { renderPartners(); }
   }
 
   /* ---------------- products ---------------- */
@@ -917,6 +986,7 @@
     } else {
       products.push({ jan: jan, itemNo: itemNo, name: name, supplier: supplier, caseQty: caseQty, price: price, email: email });
     }
+    ensurePartner(supplier);
     saveState();
     renderProducts();
     resetProductForm();
@@ -1053,6 +1123,7 @@
           products.push({ jan: jan, itemNo: itemNo, name: name, supplier: supplier, email: email, caseQty: caseQty, price: price });
           added++;
         }
+        ensurePartner(supplier);
       });
       saveState();
       renderProducts();
@@ -1558,6 +1629,7 @@
     if (!name) { toast('商品名を入力してください'); return; }
     var product = { jan: jan, itemNo: itemNo, name: name, supplier: supplier, caseQty: caseQty, price: price, email: '' };
     products.push(product);
+    ensurePartner(supplier);
     addToOrder(product, 1);
     saveState();
     renderProducts();
