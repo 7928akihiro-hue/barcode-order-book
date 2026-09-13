@@ -578,8 +578,8 @@
       <button id="tab-btn-products" onclick="showScreen('products')">商品マスタ</button>
       <button id="tab-btn-order" onclick="showScreen('order')">発注リスト</button>
       <button id="tab-btn-incoming" class="sub-btn" style="grid-column:1;" onclick="showScreen('incoming')">入荷スキャン</button>
-      <button id="tab-btn-settings" class="sub-btn" style="grid-column:2;" onclick="showScreen('settings')">設定</button>
-      <button id="tab-btn-partners" class="sub-btn" style="grid-column:3;" onclick="showScreen('partners')">取引先マスタ</button>
+      <button id="tab-btn-partners" class="sub-btn" style="grid-column:2;" onclick="showScreen('partners')">取引先マスタ</button>
+      <button id="tab-btn-settings" class="sub-btn" style="grid-column:3;" onclick="showScreen('settings')">設定</button>
     </nav>
   </header>
 
@@ -905,8 +905,8 @@
     var sorted = partners.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
     list.innerHTML = sorted.map(function (pt, idx) {
       var safeName = escapeHtml(pt.name).replace(/'/g, '&#39;');
-      return '<div class="card">' +
-        '<div class="item-name" style="font-weight:700; font-size:15px; margin-bottom:8px;">' + escapeHtml(pt.name) + '</div>' +
+      return '<details class="supplier-group">' +
+        '<summary>' + escapeHtml(pt.name) + '<span class="count">' + (pt.contact ? escapeHtml(pt.contact) : '担当者未設定') + '</span></summary>' +
         '<div class="field-grid">' +
           '<label class="field">担当者名 <input type="text" id="ptContact_' + idx + '" value="' + escapeHtml(pt.contact || '') + '"></label>' +
           '<label class="field">TEL <input type="text" id="ptTel_' + idx + '" value="' + escapeHtml(pt.tel || '') + '"></label>' +
@@ -916,7 +916,7 @@
         '<label class="field" style="margin-top:8px;">本社住所 <input type="text" id="ptHq_' + idx + '" value="' + escapeHtml(pt.hqAddress || '') + '"></label>' +
         '<label class="field" style="margin-top:8px;">倉庫住所 <input type="text" id="ptWarehouse_' + idx + '" value="' + escapeHtml(pt.warehouseAddress || '') + '"></label>' +
         '<button class="btn small block" style="margin-top:10px;" onclick="savePartner(\'' + safeName + '\', ' + idx + ')">保存</button>' +
-      '</div>';
+      '</details>';
     }).join('');
   }
 
@@ -1880,7 +1880,7 @@
     btn.textContent = '送信中…';
 
     var now = new Date();
-    var snapshot = { sentAt: now.toISOString(), items: items, recipientEmail: getPcSendEmail(), senderEmail: getPcSendFromEmail() };
+    var snapshot = { sentAt: now.toISOString(), items: items, recipientEmail: getPcSendEmail(), senderEmail: getPcSendFromEmail(), partners: partners };
     // Base64-encode the UTF-8 JSON so the POST body is pure ASCII: Apps Script's
     // e.postData.contents mangles multi-byte (Japanese) text, but base64 text survives intact.
     var jsonUtf8 = JSON.stringify(snapshot);
