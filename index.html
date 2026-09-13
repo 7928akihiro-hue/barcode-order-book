@@ -478,6 +478,29 @@
   details.import summary::-webkit-details-marker { display: none; }
   details.import[open] summary { margin-bottom: 10px; }
 
+  details.supplier-group {
+    border: 1px solid var(--paper-sunken);
+    border-radius: var(--radius-m);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  details.supplier-group summary {
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+    list-style: none;
+  }
+  details.supplier-group summary::-webkit-details-marker { display: none; }
+  details.supplier-group summary .count {
+    font-weight: 400;
+    color: var(--ink-faint);
+    font-size: 12.5px;
+    margin-left: 4px;
+  }
+  details.supplier-group[open] summary { margin-bottom: 10px; }
+  details.supplier-group .stack { gap: 10px; }
+
   .toast {
     position: fixed;
     left: 50%; bottom: 24px; transform: translateX(-50%) translateY(12px);
@@ -964,21 +987,34 @@
       '</ol>';
       return;
     }
-    var sorted = products.slice().sort(function (a, b) { return a.supplier.localeCompare(b.supplier, 'ja'); });
-    list.innerHTML = sorted.map(function (p) {
-      var priceChangeLine = '';
-      if (p.priceHistory && p.priceHistory.length) {
-        var latest = p.priceHistory[p.priceHistory.length - 1];
-        priceChangeLine = '<div class="item-sub" style="color:var(--accent);">単価変更：' + latest.date + '　¥' + latest.from + '→¥' + latest.to + '</div>';
-      }
-      return '<div class="item-row">' +
-        '<div class="item-main">' +
-          '<div class="item-name">' + escapeHtml(p.name) + '</div>' +
-          '<div class="item-sub">' + (p.itemNo ? escapeHtml(p.itemNo) + ' ・ ' : '') + '<span class="jan">' + escapeHtml(p.jan) + '</span> ・ ' + escapeHtml(p.supplier) + ' ・ 発注単位' + (p.caseQty || 1) + ' ・ ¥' + (p.price || 0) + '</div>' +
-          priceChangeLine +
-        '</div>' +
-        '<button class="btn small" onclick="editProduct(\'' + p.jan + '\')">編集</button>' +
-      '</div>';
+    var groups = {};
+    products.forEach(function (p) {
+      var key = p.supplier || '仕入れ先未設定';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(p);
+    });
+    var supplierNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b, 'ja'); });
+    list.innerHTML = supplierNames.map(function (supplier) {
+      var items = groups[supplier].slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+      var itemsHtml = items.map(function (p) {
+        var priceChangeLine = '';
+        if (p.priceHistory && p.priceHistory.length) {
+          var latest = p.priceHistory[p.priceHistory.length - 1];
+          priceChangeLine = '<div class="item-sub" style="color:var(--accent);">単価変更：' + latest.date + '　¥' + latest.from + '→¥' + latest.to + '</div>';
+        }
+        return '<div class="item-row">' +
+          '<div class="item-main">' +
+            '<div class="item-name">' + escapeHtml(p.name) + '</div>' +
+            '<div class="item-sub">' + (p.itemNo ? escapeHtml(p.itemNo) + ' ・ ' : '') + '<span class="jan">' + escapeHtml(p.jan) + '</span> ・ 発注単位' + (p.caseQty || 1) + ' ・ ¥' + (p.price || 0) + '</div>' +
+            priceChangeLine +
+          '</div>' +
+          '<button class="btn small" onclick="editProduct(\'' + p.jan + '\')">編集</button>' +
+        '</div>';
+      }).join('');
+      return '<details class="supplier-group">' +
+        '<summary>' + escapeHtml(supplier) + '<span class="count">' + items.length + '件</span></summary>' +
+        '<div class="stack">' + itemsHtml + '</div>' +
+      '</details>';
     }).join('');
   }
 
