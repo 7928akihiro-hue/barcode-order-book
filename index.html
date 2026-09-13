@@ -908,7 +908,10 @@
       return '<details class="supplier-group">' +
         '<summary>' + escapeHtml(pt.name) + '<span class="count">' + (pt.contact ? escapeHtml(pt.contact) : '担当者未設定') + '</span></summary>' +
         '<div class="field-grid">' +
-          '<label class="field">担当者名 <input type="text" id="ptContact_' + idx + '" value="' + escapeHtml(pt.contact || '') + '"></label>' +
+          '<label class="field">担当者名 <div style="position:relative;">' +
+            '<input type="text" id="ptContact_' + idx + '" value="' + escapeHtml(pt.contact || '') + '" style="width:100%; padding-right:28px;">' +
+            '<span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--ink-soft); font-size:13px; pointer-events:none;">様</span>' +
+          '</div></label>' +
           '<label class="field">TEL <input type="text" id="ptTel_' + idx + '" value="' + escapeHtml(pt.tel || '') + '"></label>' +
           '<label class="field">FAX <input type="text" id="ptFax_' + idx + '" value="' + escapeHtml(pt.fax || '') + '"></label>' +
           '<label class="field">アドレス <input type="email" id="ptEmail_' + idx + '" value="' + escapeHtml(pt.email || '') + '"></label>' +
