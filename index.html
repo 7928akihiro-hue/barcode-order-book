@@ -340,6 +340,27 @@
     font-weight: 500;
   }
 
+  .autocomplete-list {
+    position: absolute;
+    left: 0; right: 0; top: 100%;
+    margin-top: 2px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-s);
+    box-shadow: var(--shadow);
+    z-index: 20;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .autocomplete-item {
+    padding: 9px 10px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .autocomplete-item:active { background: var(--accent-soft); }
+
   .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
   /* ---------- scanner ---------- */
@@ -672,7 +693,15 @@
             <label class="field">発注単位（1ケースの個数） <input type="number" id="qCaseQty" min="1" value="1"></label>
           </div>
           <div class="field-grid">
-            <label class="field">仕入れ先名 <input type="text" id="qSupplier" placeholder="○○商店" list="supplierList"></label>
+            <label class="field">仕入れ先名
+              <div style="position:relative;">
+                <input type="text" id="qSupplier" placeholder="○○商店" autocomplete="off"
+                  oninput="showSupplierSuggestions('qSupplier','qSupplierSuggestions')"
+                  onfocus="showSupplierSuggestions('qSupplier','qSupplierSuggestions')"
+                  onblur="hideSupplierSuggestionsDelayed('qSupplierSuggestions')">
+                <div id="qSupplierSuggestions" class="autocomplete-list" style="display:none;"></div>
+              </div>
+            </label>
             <label class="field">単価（円） <input type="number" id="qPrice" min="0" value="0"></label>
           </div>
           <div class="row">
@@ -706,8 +735,15 @@
             <label class="field">発注単位（1ケースの個数） <input type="number" id="pCaseQty" min="1" value="1"></label>
           </div>
           <div class="field-grid">
-            <label class="field">仕入れ先名 <input type="text" id="pSupplier" placeholder="○○商店" list="supplierList"></label>
-            <datalist id="supplierList"></datalist>
+            <label class="field">仕入れ先名
+              <div style="position:relative;">
+                <input type="text" id="pSupplier" placeholder="○○商店" autocomplete="off"
+                  oninput="showSupplierSuggestions('pSupplier','pSupplierSuggestions')"
+                  onfocus="showSupplierSuggestions('pSupplier','pSupplierSuggestions')"
+                  onblur="hideSupplierSuggestionsDelayed('pSupplierSuggestions')">
+                <div id="pSupplierSuggestions" class="autocomplete-list" style="display:none;"></div>
+              </div>
+            </label>
             <label class="field">単価（円） <input type="number" id="pPrice" min="0" value="0"></label>
           </div>
           <label class="field">仕入れ先メール（任意） <input type="email" id="pEmail" placeholder="order@example.com"></label>
@@ -908,15 +944,37 @@
       if (partners[i].name === name) return;
     }
     partners.push({ name: name, contact: '', tel: '', fax: '', email: '', hqAddress: '', warehouseAddress: '' });
-    renderSupplierDatalist();
   }
 
   // Lets the 仕入れ先名 fields be typed freely or picked from 取引先マスタ, so a
-  // typo doesn't quietly create a near-duplicate company name.
-  function renderSupplierDatalist() {
-    var dl = document.getElementById('supplierList');
-    if (!dl) return;
-    dl.innerHTML = partners.map(function (pt) { return '<option value="' + escapeHtml(pt.name) + '">'; }).join('');
+  // typo doesn't quietly create a near-duplicate company name. Built by hand
+  // instead of <datalist> because Android Chrome doesn't reliably show
+  // datalist suggestion popups on a touch tap.
+  function showSupplierSuggestions(inputId, listId) {
+    var input = document.getElementById(inputId);
+    var list = document.getElementById(listId);
+    var query = input.value.trim().toLowerCase();
+    var matches = partners.filter(function (pt) {
+      return !query || pt.name.toLowerCase().indexOf(query) !== -1;
+    });
+    if (matches.length === 0) { list.style.display = 'none'; return; }
+    list.innerHTML = matches.map(function (pt) {
+      var safeName = escapeHtml(pt.name).replace(/'/g, '&#39;');
+      return '<div class="autocomplete-item" onmousedown="selectSupplier(\'' + inputId + '\',\'' + listId + '\',\'' + safeName + '\')">' + escapeHtml(pt.name) + '</div>';
+    }).join('');
+    list.style.display = 'block';
+  }
+
+  function selectSupplier(inputId, listId, name) {
+    document.getElementById(inputId).value = name;
+    document.getElementById(listId).style.display = 'none';
+  }
+
+  function hideSupplierSuggestionsDelayed(listId) {
+    setTimeout(function () {
+      var el = document.getElementById(listId);
+      if (el) el.style.display = 'none';
+    }, 150);
   }
 
   function findPartner(name) {
@@ -2053,7 +2111,6 @@
   /* ---------------- init ---------------- */
   loadState();
   renderProducts();
-  renderSupplierDatalist();
   renderOrder();
   renderSendHistory();
   document.getElementById('scanFeed').innerHTML = '<div class="empty">まだ読み取り履歴がありません</div>';
