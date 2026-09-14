@@ -728,6 +728,7 @@
       </div>
 
       <div class="divider-label">登録済みの商品</div>
+      <button class="btn ghost block" style="margin-bottom:8px;" onclick="startProductSearchScan()">📷 JANをスキャンして検索</button>
       <div class="row">
         <input type="text" id="productSearch" placeholder="商品名・JAN・品番で検索" oninput="renderProducts()">
       </div>
@@ -836,6 +837,7 @@
   var lastScanAt = {};
   var stream = null;
   var detector = null;
+  var scanMode = 'order'; // 'order' (スキャン発注 → stage for the order list) or 'search' (商品マスタ → fill the search box)
   var scanTimer = null;
   var zxingReader = null;
   var zxingControls = null;
@@ -1486,8 +1488,29 @@
     var now = Date.now();
     if (lastScanAt[rawValue] && now - lastScanAt[rawValue] < 1500) return; // debounce
     lastScanAt[rawValue] = now;
+    var modeAtDetection = scanMode; // toggleScanner(false) below resets scanMode, so capture it first
     toggleScanner(false); // close the camera immediately so a second item can't be read before this one is confirmed
-    processCode(rawValue);
+    if (modeAtDetection === 'search') {
+      finishProductSearchScan(rawValue);
+    } else {
+      processCode(rawValue);
+    }
+  }
+
+  // Opens the shared camera scanner in "search" mode from 商品マスタ, so a scan
+  // fills the product search box instead of staging an order-list addition.
+  function startProductSearchScan() {
+    scanMode = 'search';
+    showScreen('scan');
+    toggleScanner(true);
+  }
+
+  function finishProductSearchScan(rawValue) {
+    scanMode = 'order';
+    showScreen('products');
+    var input = document.getElementById('productSearch');
+    input.value = rawValue;
+    renderProducts();
   }
 
   // Validates the check digit for JAN-13/EAN-13, JAN-8/EAN-8, and UPC-A barcodes.
@@ -1671,8 +1694,12 @@
     var val = document.getElementById('manualJan').value.trim();
     if (!val) return;
     if (!/^[0-9]{4,}$/.test(val)) { toast('数字のバーコードを入力してください'); return; }
-    processCode(val);
     document.getElementById('manualJan').value = '';
+    if (scanMode === 'search') {
+      finishProductSearchScan(val);
+      return;
+    }
+    processCode(val);
   }
 
   function startCamera() {
@@ -1792,6 +1819,7 @@
       closeBtn.style.display = 'none';
       collapsed.style.display = 'block';
       setStatus('バーコードを商品マスタと照合します', null);
+      scanMode = 'order'; // cancelling the camera (vs. a successful detection) always returns to the normal order-scan flow
     }
   }
 
