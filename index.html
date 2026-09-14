@@ -1103,13 +1103,12 @@
     el.style.display = el.style.display === 'block' ? 'none' : 'block';
   }
 
-  // Lets 商品マスタ add straight to the order list (+1 ケース) without going
-  // through a barcode scan — same merge behavior as a real scan would give.
+  // Lets 商品マスタ add to the order list without a barcode scan, but reuses
+  // the exact same 読み取りました staging card (quantity stepper, duplicate
+  // warning, price-change note) that a real scan would show.
   function quickAddToOrder(jan) {
-    var product = findProduct(jan);
-    if (!product) return;
-    addToOrder(product, 1);
-    toast(product.name + '　+1ケース（発注リストに追加）');
+    showScreen('scan');
+    processCode(jan);
   }
 
   function renderProducts() {
