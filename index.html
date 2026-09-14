@@ -672,7 +672,7 @@
             <label class="field">発注単位（1ケースの個数） <input type="number" id="qCaseQty" min="1" value="1"></label>
           </div>
           <div class="field-grid">
-            <label class="field">仕入れ先名 <input type="text" id="qSupplier" placeholder="○○商店"></label>
+            <label class="field">仕入れ先名 <input type="text" id="qSupplier" placeholder="○○商店" list="supplierList"></label>
             <label class="field">単価（円） <input type="number" id="qPrice" min="0" value="0"></label>
           </div>
           <div class="row">
@@ -706,7 +706,8 @@
             <label class="field">発注単位（1ケースの個数） <input type="number" id="pCaseQty" min="1" value="1"></label>
           </div>
           <div class="field-grid">
-            <label class="field">仕入れ先名 <input type="text" id="pSupplier" placeholder="○○商店"></label>
+            <label class="field">仕入れ先名 <input type="text" id="pSupplier" placeholder="○○商店" list="supplierList"></label>
+            <datalist id="supplierList"></datalist>
             <label class="field">単価（円） <input type="number" id="pPrice" min="0" value="0"></label>
           </div>
           <label class="field">仕入れ先メール（任意） <input type="email" id="pEmail" placeholder="order@example.com"></label>
@@ -907,6 +908,15 @@
       if (partners[i].name === name) return;
     }
     partners.push({ name: name, contact: '', tel: '', fax: '', email: '', hqAddress: '', warehouseAddress: '' });
+    renderSupplierDatalist();
+  }
+
+  // Lets the 仕入れ先名 fields be typed freely or picked from 取引先マスタ, so a
+  // typo doesn't quietly create a near-duplicate company name.
+  function renderSupplierDatalist() {
+    var dl = document.getElementById('supplierList');
+    if (!dl) return;
+    dl.innerHTML = partners.map(function (pt) { return '<option value="' + escapeHtml(pt.name) + '">'; }).join('');
   }
 
   function findPartner(name) {
@@ -2043,6 +2053,7 @@
   /* ---------------- init ---------------- */
   loadState();
   renderProducts();
+  renderSupplierDatalist();
   renderOrder();
   renderSendHistory();
   document.getElementById('scanFeed').innerHTML = '<div class="empty">まだ読み取り履歴がありません</div>';
