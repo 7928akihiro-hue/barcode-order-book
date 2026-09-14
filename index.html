@@ -443,7 +443,7 @@
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 6px;
   }
-  .supplier-head .name { font-family: "Zen Kaku Gothic New", sans-serif; font-weight: 700; font-size: 14px; }
+  .supplier-head .name { font-family: "Zen Kaku Gothic New", sans-serif; font-weight: 700; font-size: 16px; color: var(--accent); }
   .supplier-actions { display: flex; gap: 6px; margin-top: 12px; }
 
   .empty {
@@ -490,6 +490,10 @@
     list-style: none;
   }
   details.supplier-group summary::-webkit-details-marker { display: none; }
+
+  /* Company / supplier names shown anywhere in the app. */
+  .supplier-name { color: var(--accent); font-size: 1.15em; }
+
   details.supplier-group summary .count {
     font-weight: 400;
     color: var(--ink-faint);
@@ -619,7 +623,7 @@
           <div class="item-name" id="stagingName" style="font-weight:700; font-size:16px;"></div>
           <div class="field-grid" style="font-size:15.5px; color:var(--ink-soft);">
             <div>品番：<span id="stagingItemNo"></span></div>
-            <div>仕入れ先：<span id="stagingSupplier"></span></div>
+            <div>仕入れ先：<span id="stagingSupplier" class="supplier-name"></span></div>
             <div>発注単位：<span id="stagingCaseQtyInfo"></span></div>
             <div>単価：<span id="stagingPrice"></span></div>
           </div>
@@ -784,7 +788,7 @@
 
       <div class="card" id="sendHistorySupplierCard" style="display:none; border-color: var(--accent); margin-top:10px;">
         <div class="row between" style="margin-bottom:8px;">
-          <span class="chip" id="sendHistorySupplierName" style="background:var(--accent-soft); color:var(--accent);"></span>
+          <span class="chip supplier-name" id="sendHistorySupplierName" style="background:var(--accent-soft);"></span>
           <span id="sendHistorySupplierDate" class="jan"></span>
         </div>
         <div id="sendHistorySupplierItems" class="stack"></div>
@@ -921,7 +925,7 @@
     list.innerHTML = sorted.map(function (pt, idx) {
       var safeName = escapeHtml(pt.name).replace(/'/g, '&#39;');
       return '<details class="supplier-group">' +
-        '<summary>' + escapeHtml(pt.name) + '<span class="count">' + (pt.contact ? escapeHtml(pt.contact) : '担当者未設定') + '</span></summary>' +
+        '<summary><span class="supplier-name">' + escapeHtml(pt.name) + '</span><span class="count">' + (pt.contact ? escapeHtml(pt.contact) : '担当者未設定') + '</span></summary>' +
         '<div class="field-grid">' +
           '<label class="field">担当者名 <div style="position:relative;">' +
             '<input type="text" id="ptContact_' + idx + '" value="' + escapeHtml(pt.contact || '') + '" style="width:100%; padding-right:28px;">' +
@@ -1070,7 +1074,7 @@
       var latest = p.priceHistory[p.priceHistory.length - 1];
       priceChangeLine = '<div class="item-sub" style="color:var(--accent);">単価変更：' + latest.date + '　¥' + latest.from + '→¥' + latest.to + '</div>';
     }
-    var supplierPart = showSupplier ? escapeHtml(p.supplier || '仕入れ先未設定') + ' ・ ' : '';
+    var supplierPart = showSupplier ? '<span class="supplier-name">' + escapeHtml(p.supplier || '仕入れ先未設定') + '</span> ・ ' : '';
     return '<div class="item-row">' +
       '<div class="item-main">' +
         '<div class="item-name">' + escapeHtml(p.name) + '</div>' +
@@ -1122,7 +1126,7 @@
       var items = groups[supplier].slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
       var itemsHtml = items.map(function (p) { return productRowHtml(p, false); }).join('');
       return '<details class="supplier-group">' +
-        '<summary>' + escapeHtml(supplier) + '<span class="count">' + items.length + '件</span></summary>' +
+        '<summary><span class="supplier-name">' + escapeHtml(supplier) + '</span><span class="count">' + items.length + '件</span></summary>' +
         '<div class="stack">' + itemsHtml + '</div>' +
       '</details>';
     }).join('');
@@ -1342,7 +1346,7 @@
       var amount = items.reduce(function (s, it) { return s + (it.amount || 0); }, 0);
       return '<div class="item-row" style="cursor:pointer;" onclick="openSendHistorySupplierDetail(' + i + ')">' +
         '<div class="item-main">' +
-          '<div class="item-name">' + escapeHtml(name) + '</div>' +
+          '<div class="item-name supplier-name">' + escapeHtml(name) + '</div>' +
           '<div class="item-sub">' + items.length + '品目 ・ 計' + pieces + '個 ・ ¥' + amount + '</div>' +
         '</div></div>';
     }).join('');
