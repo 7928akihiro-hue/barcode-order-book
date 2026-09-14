@@ -728,7 +728,19 @@
       </div>
 
       <div class="divider-label">登録済みの商品</div>
-      <button class="btn ghost block" style="margin-bottom:8px;" onclick="startProductSearchScan()">📷 JANをスキャンして検索</button>
+      <button class="btn primary" style="width:100%; padding:14px; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;" onclick="startProductSearchScan()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="flex:none;">
+          <rect x="1" y="2" width="2" height="20"/>
+          <rect x="4" y="2" width="1" height="20"/>
+          <rect x="6" y="2" width="3" height="20"/>
+          <rect x="10" y="2" width="1" height="20"/>
+          <rect x="12" y="2" width="2" height="20"/>
+          <rect x="15" y="2" width="1" height="20"/>
+          <rect x="17" y="2" width="3" height="20"/>
+          <rect x="21" y="2" width="1" height="20"/>
+        </svg>
+        JANをスキャンして検索
+      </button>
       <div class="row">
         <input type="text" id="productSearch" placeholder="商品名・JAN・品番で検索" oninput="renderProducts()">
       </div>
