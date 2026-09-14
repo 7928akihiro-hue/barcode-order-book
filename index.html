@@ -728,6 +728,9 @@
       </div>
 
       <div class="divider-label">登録済みの商品</div>
+      <div class="row">
+        <input type="text" id="productSearch" placeholder="商品名・JAN・品番で検索" oninput="renderProducts()">
+      </div>
       <div class="card" id="productListCard">
         <div id="productList" class="stack"></div>
       </div>
@@ -1049,6 +1052,23 @@
     resetProductForm();
   }
 
+  function productRowHtml(p, showSupplier) {
+    var priceChangeLine = '';
+    if (p.priceHistory && p.priceHistory.length) {
+      var latest = p.priceHistory[p.priceHistory.length - 1];
+      priceChangeLine = '<div class="item-sub" style="color:var(--accent);">単価変更：' + latest.date + '　¥' + latest.from + '→¥' + latest.to + '</div>';
+    }
+    var supplierPart = showSupplier ? escapeHtml(p.supplier || '仕入れ先未設定') + ' ・ ' : '';
+    return '<div class="item-row">' +
+      '<div class="item-main">' +
+        '<div class="item-name">' + escapeHtml(p.name) + '</div>' +
+        '<div class="item-sub">' + (p.itemNo ? escapeHtml(p.itemNo) + ' ・ ' : '') + '<span class="jan">' + escapeHtml(p.jan) + '</span> ・ ' + supplierPart + '発注単位' + (p.caseQty || 1) + ' ・ ¥' + (p.price || 0) + '</div>' +
+        priceChangeLine +
+      '</div>' +
+      '<button class="btn small" onclick="editProduct(\'' + p.jan + '\')">編集</button>' +
+    '</div>';
+  }
+
   function renderProducts() {
     var list = document.getElementById('productList');
     document.getElementById('productCount').textContent = products.length + '件';
@@ -1060,6 +1080,25 @@
       '</ol>';
       return;
     }
+
+    var searchEl = document.getElementById('productSearch');
+    var rawQuery = searchEl ? searchEl.value.trim() : '';
+    var query = rawQuery.toLowerCase();
+
+    if (query) {
+      var matches = products.filter(function (p) {
+        return (p.name && p.name.toLowerCase().indexOf(query) !== -1) ||
+          (p.jan && p.jan.toLowerCase().indexOf(query) !== -1) ||
+          (p.itemNo && p.itemNo.toLowerCase().indexOf(query) !== -1);
+      }).sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+      if (matches.length === 0) {
+        list.innerHTML = '<div class="empty">「' + escapeHtml(rawQuery) + '」に一致する商品が見つかりません。</div>';
+        return;
+      }
+      list.innerHTML = matches.map(function (p) { return productRowHtml(p, true); }).join('');
+      return;
+    }
+
     var groups = {};
     products.forEach(function (p) {
       var key = p.supplier || '仕入れ先未設定';
@@ -1069,21 +1108,7 @@
     var supplierNames = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b, 'ja'); });
     list.innerHTML = supplierNames.map(function (supplier) {
       var items = groups[supplier].slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
-      var itemsHtml = items.map(function (p) {
-        var priceChangeLine = '';
-        if (p.priceHistory && p.priceHistory.length) {
-          var latest = p.priceHistory[p.priceHistory.length - 1];
-          priceChangeLine = '<div class="item-sub" style="color:var(--accent);">単価変更：' + latest.date + '　¥' + latest.from + '→¥' + latest.to + '</div>';
-        }
-        return '<div class="item-row">' +
-          '<div class="item-main">' +
-            '<div class="item-name">' + escapeHtml(p.name) + '</div>' +
-            '<div class="item-sub">' + (p.itemNo ? escapeHtml(p.itemNo) + ' ・ ' : '') + '<span class="jan">' + escapeHtml(p.jan) + '</span> ・ 発注単位' + (p.caseQty || 1) + ' ・ ¥' + (p.price || 0) + '</div>' +
-            priceChangeLine +
-          '</div>' +
-          '<button class="btn small" onclick="editProduct(\'' + p.jan + '\')">編集</button>' +
-        '</div>';
-      }).join('');
+      var itemsHtml = items.map(function (p) { return productRowHtml(p, false); }).join('');
       return '<details class="supplier-group">' +
         '<summary>' + escapeHtml(supplier) + '<span class="count">' + items.length + '件</span></summary>' +
         '<div class="stack">' + itemsHtml + '</div>' +
