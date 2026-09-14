@@ -1084,6 +1084,7 @@
         '<div class="item-sub">' + (p.itemNo ? escapeHtml(p.itemNo) + ' ・ ' : '') + '<span class="jan">' + escapeHtml(p.jan) + '</span> ・ ' + supplierPart + '発注単位' + (p.caseQty || 1) + ' ・ ¥' + (p.price || 0) + '</div>' +
         priceChangeLine +
       '</div>' +
+      '<button class="btn small primary" onclick="event.stopPropagation(); quickAddToOrder(\'' + p.jan + '\')">発注</button>' +
     '</div>' +
     '<div id="pdetail_' + p.jan + '" style="display:none; padding:0 0 10px; border-top:1px dashed var(--line);">' +
       '<div class="field-grid" style="font-size:13px; color:var(--ink-soft); margin:10px 0;">' +
@@ -1100,6 +1101,15 @@
     var el = document.getElementById('pdetail_' + jan);
     if (!el) return;
     el.style.display = el.style.display === 'block' ? 'none' : 'block';
+  }
+
+  // Lets 商品マスタ add straight to the order list (+1 ケース) without going
+  // through a barcode scan — same merge behavior as a real scan would give.
+  function quickAddToOrder(jan) {
+    var product = findProduct(jan);
+    if (!product) return;
+    addToOrder(product, 1);
+    toast(product.name + '　+1ケース（発注リストに追加）');
   }
 
   function renderProducts() {
