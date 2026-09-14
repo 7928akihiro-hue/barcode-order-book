@@ -1075,14 +1075,31 @@
       priceChangeLine = '<div class="item-sub" style="color:var(--accent);">単価変更：' + latest.date + '　¥' + latest.from + '→¥' + latest.to + '</div>';
     }
     var supplierPart = showSupplier ? '<span class="supplier-name">' + escapeHtml(p.supplier || '仕入れ先未設定') + '</span> ・ ' : '';
-    return '<div class="item-row">' +
+    // Tapping the row only ever reveals a read-only detail panel; editing
+    // requires an extra tap on its own 編集 button, so a mis-tap in a long
+    // list can't accidentally change a product's data.
+    return '<div class="item-row" style="cursor:pointer;" onclick="toggleProductDetail(\'' + p.jan + '\')">' +
       '<div class="item-main">' +
         '<div class="item-name">' + escapeHtml(p.name) + '</div>' +
         '<div class="item-sub">' + (p.itemNo ? escapeHtml(p.itemNo) + ' ・ ' : '') + '<span class="jan">' + escapeHtml(p.jan) + '</span> ・ ' + supplierPart + '発注単位' + (p.caseQty || 1) + ' ・ ¥' + (p.price || 0) + '</div>' +
         priceChangeLine +
       '</div>' +
-      '<button class="btn small" onclick="editProduct(\'' + p.jan + '\')">編集</button>' +
+    '</div>' +
+    '<div id="pdetail_' + p.jan + '" style="display:none; padding:0 0 10px; border-top:1px dashed var(--line);">' +
+      '<div class="field-grid" style="font-size:13px; color:var(--ink-soft); margin:10px 0;">' +
+        '<div>品番：' + (p.itemNo ? escapeHtml(p.itemNo) : '－') + '</div>' +
+        '<div>仕入れ先：<span class="supplier-name">' + escapeHtml(p.supplier || '仕入れ先未設定') + '</span></div>' +
+        '<div>発注単位：' + (p.caseQty || 1) + '個</div>' +
+        '<div>単価：¥' + (p.price || 0) + '</div>' +
+      '</div>' +
+      '<button class="btn small" onclick="event.stopPropagation(); editProduct(\'' + p.jan + '\')">編集</button>' +
     '</div>';
+  }
+
+  function toggleProductDetail(jan) {
+    var el = document.getElementById('pdetail_' + jan);
+    if (!el) return;
+    el.style.display = el.style.display === 'block' ? 'none' : 'block';
   }
 
   function renderProducts() {
