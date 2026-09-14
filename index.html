@@ -1104,6 +1104,7 @@
     var reader = new FileReader();
     reader.onload = function () {
       var text = String(reader.result || '');
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip a UTF-8 BOM (e.g. from Excel/PowerShell exports)
       var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length > 0; });
       var added = 0;
       lines.forEach(function (line) {
