@@ -661,7 +661,7 @@
                 <button type="button" onclick="adjustStagingCases(-1)" aria-label="数量を減らす">−</button>
               </div>
             </div>
-            <div id="stagingTotalPieces" style="margin-top:6px; font-weight:700; font-size:16px; color:var(--ink);"></div>
+            <div id="stagingTotalPieces" style="margin-top:6px;"></div>
           </label>
           </div>
           <div class="row">
@@ -1775,7 +1775,8 @@
     if (!el || !product) return;
     var cases = parseInt(document.getElementById('stagingCases').value, 10) || 0;
     var caseQty = product.caseQty || 1;
-    el.textContent = caseQty + '個 × ' + cases + 'ケース = ' + (caseQty * cases) + '個';
+    el.innerHTML = '<span style="font-size:12px; font-weight:400; color:var(--ink-soft);">' + caseQty + '個 × ' + cases + 'ケース = </span>' +
+      '<span style="font-size:16px; font-weight:700; color:var(--ink);">' + (caseQty * cases) + '個</span>';
   }
 
   function showQuickRegister(jan) {
