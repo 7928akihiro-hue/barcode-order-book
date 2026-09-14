@@ -653,7 +653,7 @@
           <label class="field" style="gap:2px; color:var(--accent); font-weight:700;">発注数量
             <div class="row" style="align-items:center; gap:8px; margin-top:2px;">
               <div style="position:relative; flex:1;">
-                <input type="number" id="stagingCases" inputmode="numeric" min="1" value="1" style="width:100%; padding-right:58px; text-align:left;">
+                <input type="number" id="stagingCases" inputmode="numeric" min="1" value="1" style="width:100%; padding-right:58px; text-align:left;" oninput="updateStagingTotal()">
                 <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--ink-soft); font-size:14px; pointer-events:none;">ケース</span>
               </div>
               <div class="vstepper">
@@ -661,6 +661,7 @@
                 <button type="button" onclick="adjustStagingCases(-1)" aria-label="数量を減らす">−</button>
               </div>
             </div>
+            <div id="stagingTotalPieces" style="margin-top:4px; font-weight:400; color:var(--ink-soft);"></div>
           </label>
           </div>
           <div class="row">
@@ -1684,6 +1685,7 @@
     var isDuplicate = mode === 'duplicate';
     var effectiveMode = isDuplicate ? 'edit' : (mode || 'add');
     card.dataset.jan = product.jan;
+    updateStagingTotal();
     card.dataset.mode = effectiveMode;
     var chip = document.getElementById('stagingChip');
     var btn = document.getElementById('stagingSubmitBtn');
@@ -1761,6 +1763,19 @@
     var val = (parseInt(input.value, 10) || 1) + delta;
     if (val < 1) val = 1;
     input.value = val;
+    updateStagingTotal();
+  }
+
+  // Shows 発注単位 × ケース数 = total pieces below the stepper, so the total
+  // individual-item count is visible without doing the math by hand.
+  function updateStagingTotal() {
+    var el = document.getElementById('stagingTotalPieces');
+    var card = document.getElementById('scanStagingCard');
+    var product = findProduct(card.dataset.jan);
+    if (!el || !product) return;
+    var cases = parseInt(document.getElementById('stagingCases').value, 10) || 0;
+    var caseQty = product.caseQty || 1;
+    el.textContent = caseQty + '個 × ' + cases + 'ケース = ' + (caseQty * cases) + '個';
   }
 
   function showQuickRegister(jan) {
