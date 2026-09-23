@@ -1018,9 +1018,9 @@
   function showSupplierSuggestions(inputId, listId) {
     var input = document.getElementById(inputId);
     var list = document.getElementById(listId);
-    var query = input.value.trim().toLowerCase();
+    var query = normalizeSearchText(input.value.trim());
     var matches = partners.filter(function (pt) {
-      return !query || pt.name.toLowerCase().indexOf(query) !== -1;
+      return !query || normalizeSearchText(pt.name).indexOf(query) !== -1;
     });
     if (matches.length === 0) { list.style.display = 'none'; return; }
     list.innerHTML = matches.map(function (pt) {
@@ -1269,13 +1269,13 @@
 
     var searchEl = document.getElementById('productSearch');
     var rawQuery = searchEl ? searchEl.value.trim() : '';
-    var query = rawQuery.toLowerCase();
+    var query = normalizeSearchText(rawQuery);
 
     if (query) {
       var matches = products.filter(function (p) {
-        return (p.name && p.name.toLowerCase().indexOf(query) !== -1) ||
-          (p.jan && p.jan.toLowerCase().indexOf(query) !== -1) ||
-          (p.itemNo && p.itemNo.toLowerCase().indexOf(query) !== -1);
+        return (p.name && normalizeSearchText(p.name).indexOf(query) !== -1) ||
+          (p.jan && normalizeSearchText(p.jan).indexOf(query) !== -1) ||
+          (p.itemNo && normalizeSearchText(p.itemNo).indexOf(query) !== -1);
       }).sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
       if (matches.length === 0) {
         list.innerHTML = '<div class="empty">「' + escapeHtml(rawQuery) + '」に一致する商品が見つかりません。</div>';
@@ -1300,6 +1300,12 @@
         '<div class="stack">' + itemsHtml + '</div>' +
       '</details>';
     }).join('');
+  }
+
+  // Makes text search ignore full-width/half-width and upper/lower-case
+  // differences (Ｍ-５０６０ vs ｍ－5060 vs m-5060 all become the same string).
+  function normalizeSearchText(s) {
+    return String(s || '').normalize('NFKC').toLowerCase();
   }
 
   function escapeHtml(s) {
