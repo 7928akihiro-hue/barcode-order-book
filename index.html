@@ -673,6 +673,8 @@
   <main>
     <!-- ================= SCAN SCREEN ================= -->
     <section id="screen-scan" class="screen active">
+      <div id="scannerHomeMount">
+      <div id="scannerUI">
       <div class="scan-status" id="scanStatus">バーコードを商品マスタと照合します</div>
 
       <div class="card" id="scannerCollapsed" style="text-align:center;">
@@ -698,6 +700,19 @@
         <div class="idle-msg" id="scannerIdleMsg">カメラを起動して読み取りを開始します</div>
       </div>
       <button class="btn ghost" id="scannerCloseBtn" style="display:none; width:100%; margin-bottom:14px;" onclick="toggleScanner(false)">スキャンを終了</button>
+
+      <div class="manual-add card" id="manualAddCard">
+        <label class="field">
+          JAN / バーコードを直接入力
+          <div class="row">
+            <input type="text" id="manualJan" inputmode="numeric" placeholder="例）4901234567894">
+            <button class="btn primary" onclick="handleManualAdd()">追加</button>
+          </div>
+        </label>
+        <p class="hint" style="margin:8px 0 0;">読み取りエラーの場合はこちらに直接入力。</p>
+      </div>
+      </div>
+      </div>
 
       <div class="card" id="scanStagingCard" style="display:none; border-color: var(--accent);">
         <div class="row between" style="margin-bottom:8px;">
@@ -733,17 +748,6 @@
             <button class="btn ghost" onclick="dismissStaging()">今回は無視</button>
           </div>
         </div>
-      </div>
-
-      <div class="manual-add card" id="manualAddCard">
-        <label class="field">
-          JAN / バーコードを直接入力
-          <div class="row">
-            <input type="text" id="manualJan" inputmode="numeric" placeholder="例）4901234567894">
-            <button class="btn primary" onclick="handleManualAdd()">追加</button>
-          </div>
-        </label>
-        <p class="hint" style="margin:8px 0 0;">読み取りエラーの場合はこちらに直接入力。</p>
       </div>
 
       <div class="card" id="quickRegisterCard" style="display:none; border-color: var(--warning);">
@@ -845,6 +849,7 @@
         </svg>
         JANをスキャンして検索
       </button>
+      <div id="productScannerMount"></div>
       <div class="row">
         <input type="text" id="productSearch" placeholder="商品名・JAN・品番で検索" oninput="renderProducts()" style="border: 2px solid #fff; box-shadow: var(--shadow);">
       </div>
@@ -1726,8 +1731,19 @@
   // fills the product search box instead of staging an order-list addition.
   function startProductSearchScan() {
     scanMode = 'search';
-    showScreen('scan');
+    // Move the shared camera UI into 商品マスタ instead of switching screens,
+    // so the camera opens right where the button was pressed.
+    document.getElementById('productScannerMount').appendChild(document.getElementById('scannerUI'));
     toggleScanner(true);
+  }
+
+  // Puts the shared camera UI back in its home screen (スキャン発注). Called
+  // whenever the scanner closes, whether it was opened from there or from
+  // 商品マスタ's "JANをスキャンして検索".
+  function returnScannerUIHome() {
+    var home = document.getElementById('scannerHomeMount');
+    var ui = document.getElementById('scannerUI');
+    if (home && ui && ui.parentNode !== home) home.appendChild(ui);
   }
 
   function finishProductSearchScan(rawValue) {
@@ -2060,6 +2076,7 @@
       collapsed.style.display = 'block';
       setStatus('バーコードを商品マスタと照合します', null);
       scanMode = 'order'; // cancelling the camera (vs. a successful detection) always returns to the normal order-scan flow
+      returnScannerUIHome();
     }
   }
 
