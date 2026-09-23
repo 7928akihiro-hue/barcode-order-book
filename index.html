@@ -788,6 +788,7 @@
 
     <!-- ================= PRODUCTS SCREEN ================= -->
     <section id="screen-products" class="screen">
+      <div id="productScreenIntro">
       <h2 class="section-title">商品マスタ <span class="count" id="productCount">0件</span></h2>
       <p class="hint">最初にスキャン対象の商品を登録してください。JANコード・品番・商品名・仕入れ先・仕入れ先メール・発注単位（1ケースの個数）・単価を登録します。スキャン1回で1ケース分が発注リストに追加されます。</p>
 
@@ -849,6 +850,7 @@
         </svg>
         JANをスキャンして検索
       </button>
+      </div>
       <div id="productScannerMount"></div>
       <div class="row">
         <input type="text" id="productSearch" placeholder="商品名・JAN・品番で検索" oninput="renderProducts()" style="border: 2px solid #fff; box-shadow: var(--shadow);">
@@ -1734,6 +1736,9 @@
     // Move the shared camera UI into 商品マスタ instead of switching screens,
     // so the camera opens right where the button was pressed.
     document.getElementById('productScannerMount').appendChild(document.getElementById('scannerUI'));
+    // Collapse the registration/search intro so the camera sits at the top.
+    var intro = document.getElementById('productScreenIntro');
+    if (intro) intro.style.display = 'none';
     toggleScanner(true);
   }
 
@@ -1744,6 +1749,8 @@
     var home = document.getElementById('scannerHomeMount');
     var ui = document.getElementById('scannerUI');
     if (home && ui && ui.parentNode !== home) home.appendChild(ui);
+    var intro = document.getElementById('productScreenIntro');
+    if (intro) intro.style.display = '';
   }
 
   function finishProductSearchScan(rawValue) {
