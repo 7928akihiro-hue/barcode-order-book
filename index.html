@@ -1272,16 +1272,15 @@
     var query = normalizeSearchText(rawQuery);
 
     if (query) {
-      var matches = products.filter(function (p) {
-        return (p.name && normalizeSearchText(p.name).indexOf(query) !== -1) ||
-          (p.jan && normalizeSearchText(p.jan).indexOf(query) !== -1) ||
-          (p.itemNo && normalizeSearchText(p.itemNo).indexOf(query) !== -1);
-      }).sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
-      if (matches.length === 0) {
+      var scored = products.map(function (p) {
+        return { product: p, score: bestFuzzyScore(query, [p.name, p.jan, p.itemNo]) };
+      }).filter(function (entry) { return entry.score !== null; });
+      scored.sort(function (a, b) { return b.score - a.score; }); // highest match rate first
+      if (scored.length === 0) {
         list.innerHTML = '<div class="empty">「' + escapeHtml(rawQuery) + '」に一致する商品が見つかりません。</div>';
         return;
       }
-      list.innerHTML = matches.map(function (p) { return productRowHtml(p, true); }).join('');
+      list.innerHTML = scored.map(function (entry) { return productRowHtml(entry.product, true); }).join('');
       return;
     }
 
@@ -1306,6 +1305,42 @@
   // differences (Ｍ-５０６０ vs ｍ－5060 vs m-5060 all become the same string).
   function normalizeSearchText(s) {
     return String(s || '').normalize('NFKC').toLowerCase();
+  }
+
+  // Fuzzy subsequence match: every character of `query` must appear in `text`
+  // in the same order, but not necessarily next to each other (so a typo or a
+  // skipped character still matches). Returns a score — higher means the
+  // match is tighter/closer to the start — or null when there's no match at all.
+  function fuzzyScore(query, text) {
+    if (!query) return 0;
+    if (!text) return null;
+    var qi = 0, ti = 0, score = 0, consecutive = 0, firstMatchIndex = -1;
+    while (qi < query.length && ti < text.length) {
+      if (query.charAt(qi) === text.charAt(ti)) {
+        if (firstMatchIndex === -1) firstMatchIndex = ti;
+        consecutive++;
+        score += 1 + consecutive; // consecutive runs score much higher than scattered hits
+        qi++;
+      } else {
+        consecutive = 0;
+      }
+      ti++;
+    }
+    if (qi < query.length) return null; // some query character never appeared in order
+    var span = ti - firstMatchIndex || 1;
+    score += (query.length / span) * 10; // reward a tight, compact match
+    score -= firstMatchIndex * 0.1; // small preference for matches near the start
+    return score;
+  }
+
+  // Best (highest) fuzzy score across several fields, or null if none match.
+  function bestFuzzyScore(query, fields) {
+    var best = null;
+    for (var i = 0; i < fields.length; i++) {
+      var s = fuzzyScore(query, normalizeSearchText(fields[i]));
+      if (s !== null && (best === null || s > best)) best = s;
+    }
+    return best;
   }
 
   function escapeHtml(s) {
