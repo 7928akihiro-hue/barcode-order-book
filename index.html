@@ -382,7 +382,7 @@
   button.btn.block { width: 100%; }
   button.btn.small { padding: 7px 10px; font-size: 12px; }
 
-  input[type="text"], input[type="email"], input[type="number"], input[type="tel"], textarea {
+  input[type="text"], input[type="email"], input[type="number"], input[type="tel"], textarea, select {
     width: 100%;
     font-family: "Noto Sans JP", sans-serif;
     font-size: 14px;
@@ -870,7 +870,10 @@
           <span style="font-family:'Zen Kaku Gothic New',sans-serif; font-weight:700; font-size:13px;">発注書メール送信</span>
           <span class="chip" id="pcSendStatusChip" style="background:var(--paper-sunken); color:var(--ink-faint);">未送信</span>
         </div>
-        <p class="hint" style="margin-bottom:10px;">たまった発注データから発注書Excelを自動作成し、下の宛先にメールで送ります。</p>
+        <p class="hint" style="margin-bottom:10px;">たまった発注データから発注書Excelを自動作成し、選んだ宛先にメールで送ります。</p>
+        <label class="field" style="margin-bottom:10px;">メール送信先
+          <select id="orderMailRecipientSelect" onchange="saveSelectedMailRecipient()"></select>
+        </label>
         <button class="btn primary block" onclick="sendToPC()" id="sendToPcBtn">発注書をメールで送信</button>
       </div>
 
@@ -917,12 +920,13 @@
     <section id="screen-settings" class="screen">
       <h2 class="section-title">設定</h2>
       <div class="card" style="border-color: var(--accent);">
-        <p class="hint" style="margin-bottom:10px;">「発注書メール送信」で使う宛先です。ここに登録したメールアドレスに発注書のExcelが届きます。</p>
-        <label class="field">送信先メールアドレス
-          <input type="email" id="pcSendEmail" placeholder="例）a-watanabe@nanpou-ep.co.jp">
-        </label>
-        <p class="hint" id="pcSendEmailInfo" style="margin:4px 0 0;"></p>
-        <button class="btn primary block" style="margin-top:10px;" onclick="savePcSendEmail()">保存</button>
+        <p class="hint" style="margin-bottom:10px;">「発注書メール送信」で選べる送り先の一覧です。発注リスト画面のプルダウンでここに登録した宛先を選んで送信します。</p>
+        <div id="mailRecipientList" class="stack"></div>
+        <div class="field-grid" style="margin-top:10px;">
+          <label class="field">送り先名 <input type="text" id="newRecipientName" placeholder="例）社長"></label>
+          <label class="field">アドレス <input type="email" id="newRecipientEmail" placeholder="例）a-watanabe@nanpou-ep.co.jp"></label>
+        </div>
+        <button class="btn primary block" style="margin-top:10px;" onclick="addMailRecipient()">送り先を追加</button>
       </div>
 
       <div class="card" style="border-color: var(--accent); margin-top:10px;">
@@ -1122,7 +1126,7 @@
     });
     if (name !== 'scan') { toggleScanner(false); }
     if (name !== 'order') { closeSendHistoryDetail(); }
-    if (name === 'order') { renderOrder(); renderSendHistory(); }
+    if (name === 'order') { renderOrder(); renderSendHistory(); renderOrderMailRecipientSelect(); }
     if (name === 'products') { renderProducts(); }
     if (name === 'settings') { populateSettingsScreen(); }
     if (name === 'partners') { renderPartners(); }
@@ -2100,11 +2104,126 @@
   // Baked in so the app works on any device with zero setup — nobody needs to
   // know about or paste the Google Apps Script project URL.
   var PC_SEND_URL = 'https://script.google.com/macros/s/AKfycbzrxg6anqPjWRpGKFU0flJHTTAt1V2D7ENq21EBOzNgrESCRAbuWyvNlgPWvCp02DT_/exec';
-  var PC_SEND_EMAIL_KEY = 'pcSendEmail';
   var PC_SEND_FROM_EMAIL_KEY = 'pcSendFromEmail';
+  var MAIL_RECIPIENTS_KEY = 'mailRecipients';
+  var SELECTED_RECIPIENT_KEY = 'selectedMailRecipientName';
+  var DEFAULT_MAIL_RECIPIENTS = [
+    { name: 'オフィス１', email: 'office-1@nanpou-ep.co.jp' },
+    { name: '社長', email: 'a-watanabe@nanpou-ep.co.jp' },
+    { name: '上野', email: 'k-ueno@nanpou-ep.co.jp' },
+    { name: '山下', email: 's-yamasita@nanpou-ep.co.jp' },
+    { name: '袋井', email: 'n-fukuroi@nanpou-ep.co.jp' }
+  ];
 
-  function getPcSendEmail() {
-    try { return localStorage.getItem(PC_SEND_EMAIL_KEY) || ''; } catch (e) { return ''; }
+  function getMailRecipients() {
+    try {
+      var raw = localStorage.getItem(MAIL_RECIPIENTS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { /* fall through to default */ }
+    return DEFAULT_MAIL_RECIPIENTS.slice();
+  }
+
+  function saveMailRecipientsList(list) {
+    try { localStorage.setItem(MAIL_RECIPIENTS_KEY, JSON.stringify(list)); } catch (e) { toast('この端末では保存できませんでした'); }
+  }
+
+  function renderMailRecipientList() {
+    var list = getMailRecipients();
+    var container = document.getElementById('mailRecipientList');
+    if (list.length === 0) {
+      container.innerHTML = '<div class="empty">送り先がまだありません。下から追加してください。</div>';
+      return;
+    }
+    container.innerHTML = list.map(function (r, idx) {
+      return '<div class="card" style="padding:10px;">' +
+        '<div class="field-grid">' +
+        '<label class="field">送り先名 <input type="text" value="' + escapeHtml(r.name) + '" onchange="updateMailRecipient(' + idx + ', \'name\', this.value)"></label>' +
+        '<label class="field">アドレス <input type="email" value="' + escapeHtml(r.email) + '" onchange="updateMailRecipient(' + idx + ', \'email\', this.value)"></label>' +
+        '</div>' +
+        '<div style="text-align:right; margin-top:6px;">' +
+        '<button class="btn ghost" style="font-size:11px; padding:4px 10px; color:var(--warning);" onclick="deleteMailRecipient(' + idx + ')">この送り先を削除</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function updateMailRecipient(idx, field, value) {
+    var list = getMailRecipients();
+    if (!list[idx]) return;
+    value = value.trim();
+    if (field === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      toast('正しいメールアドレスを入力してください');
+      renderMailRecipientList();
+      return;
+    }
+    var oldName = list[idx].name;
+    list[idx][field] = value;
+    saveMailRecipientsList(list);
+    if (field === 'name' && getSelectedMailRecipientName() === oldName) {
+      try { localStorage.setItem(SELECTED_RECIPIENT_KEY, value); } catch (e) {}
+    }
+    toast('送り先を更新しました');
+    renderMailRecipientList();
+    renderOrderMailRecipientSelect();
+  }
+
+  function deleteMailRecipient(idx) {
+    var list = getMailRecipients();
+    if (!list[idx]) return;
+    if (!confirm('「' + list[idx].name + '」を削除しますか？')) return;
+    list.splice(idx, 1);
+    saveMailRecipientsList(list);
+    renderMailRecipientList();
+    renderOrderMailRecipientSelect();
+  }
+
+  function addMailRecipient() {
+    var name = document.getElementById('newRecipientName').value.trim();
+    var email = document.getElementById('newRecipientEmail').value.trim();
+    if (!name || !email) { toast('送り先名とアドレスを入力してください'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('正しいメールアドレスを入力してください'); return; }
+    var list = getMailRecipients();
+    list.push({ name: name, email: email });
+    saveMailRecipientsList(list);
+    document.getElementById('newRecipientName').value = '';
+    document.getElementById('newRecipientEmail').value = '';
+    toast('送り先を追加しました：' + name);
+    renderMailRecipientList();
+    renderOrderMailRecipientSelect();
+  }
+
+  function getSelectedMailRecipientName() {
+    try { return localStorage.getItem(SELECTED_RECIPIENT_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  function saveSelectedMailRecipient() {
+    var select = document.getElementById('orderMailRecipientSelect');
+    try { localStorage.setItem(SELECTED_RECIPIENT_KEY, select.value); } catch (e) {}
+  }
+
+  function renderOrderMailRecipientSelect() {
+    var select = document.getElementById('orderMailRecipientSelect');
+    var list = getMailRecipients();
+    var savedName = getSelectedMailRecipientName();
+    if (list.length === 0) {
+      select.innerHTML = '<option value="">送り先が未登録です（設定画面で追加してください）</option>';
+      return;
+    }
+    select.innerHTML = list.map(function (r) {
+      return '<option value="' + escapeHtml(r.name) + '"' + (r.name === savedName ? ' selected' : '') + '>' + escapeHtml(r.name) + '（' + escapeHtml(r.email) + '）</option>';
+    }).join('');
+    if (!list.some(function (r) { return r.name === savedName; })) {
+      select.value = list[0].name;
+      try { localStorage.setItem(SELECTED_RECIPIENT_KEY, list[0].name); } catch (e) {}
+    }
+  }
+
+  function getSelectedMailRecipientEmail() {
+    var list = getMailRecipients();
+    var savedName = getSelectedMailRecipientName();
+    var match = list.filter(function (r) { return r.name === savedName; })[0];
+    if (match) return match.email;
+    return list.length ? list[0].email : '';
   }
 
   function getPcSendFromEmail() {
@@ -2112,21 +2231,11 @@
   }
 
   function populateSettingsScreen() {
-    var saved = getPcSendEmail();
-    document.getElementById('pcSendEmail').value = saved;
-    document.getElementById('pcSendEmailInfo').textContent = saved ? '保存済み：' + saved : '未設定（既定の宛先に届きます）';
+    renderMailRecipientList();
 
     var savedFrom = getPcSendFromEmail();
     document.getElementById('pcSendFromEmail').value = savedFrom;
     document.getElementById('pcSendFromEmailInfo').textContent = savedFrom ? '保存済み：' + savedFrom : '未設定（既定の送信元のまま届きます）';
-  }
-
-  function savePcSendEmail() {
-    var email = document.getElementById('pcSendEmail').value.trim();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('正しいメールアドレスを入力してください'); return; }
-    try { localStorage.setItem(PC_SEND_EMAIL_KEY, email); } catch (e) { toast('この端末では保存できませんでした'); return; }
-    toast(email ? '送信先を保存しました：' + email : '送信先をクリアしました');
-    populateSettingsScreen();
   }
 
   function savePcSendFromEmail() {
@@ -2201,7 +2310,7 @@
     btn.textContent = '送信中…';
 
     var now = new Date();
-    var snapshot = { sentAt: now.toISOString(), items: items, recipientEmail: getPcSendEmail(), senderEmail: getPcSendFromEmail(), partners: partners };
+    var snapshot = { sentAt: now.toISOString(), items: items, recipientEmail: getSelectedMailRecipientEmail(), senderEmail: getPcSendFromEmail(), partners: partners };
     // Base64-encode the UTF-8 JSON so the POST body is pure ASCII: Apps Script's
     // e.postData.contents mangles multi-byte (Japanese) text, but base64 text survives intact.
     var jsonUtf8 = JSON.stringify(snapshot);
