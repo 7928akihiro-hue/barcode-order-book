@@ -924,29 +924,29 @@
       <h2 class="section-title">設定</h2>
       <div class="card" style="border-color: var(--accent);">
         <p class="hint" style="margin-bottom:10px;">「発注書メール送信」で選べる送り先の一覧です。発注リスト画面のプルダウンでここに登録した宛先を選んで送信します。</p>
-        <div id="mailRecipientList" class="stack"></div>
         <details class="import">
-          <summary>送り先を追加</summary>
-          <div class="field-grid">
-            <label class="field">送り先名 <input type="text" id="newRecipientName" placeholder="例）社長"></label>
-            <label class="field">アドレス <input type="email" id="newRecipientEmail" placeholder="例）a-watanabe@nanpou-ep.co.jp"></label>
-          </div>
-          <button class="btn primary block" style="margin-top:10px;" onclick="addMailRecipient()">送り先を追加</button>
+          <summary>送り先一覧</summary>
+          <div id="mailRecipientList" class="stack"></div>
         </details>
+        <div class="field-grid" style="margin-top:10px;">
+          <label class="field">送り先名 <input type="text" id="newRecipientName" placeholder="例）社長"></label>
+          <label class="field">アドレス <input type="email" id="newRecipientEmail" placeholder="例）a-watanabe@nanpou-ep.co.jp"></label>
+        </div>
+        <button class="btn primary block" style="margin-top:10px;" onclick="addMailRecipient()">送り先を追加</button>
       </div>
 
       <div class="card" style="border-color: var(--accent); margin-top:10px;">
         <p class="hint" style="margin-bottom:10px;">発注書に記載する入荷場所（納品場所）の一覧です。発注リスト画面のプルダウンでここに登録した場所を選ぶと、発注書Excelの納品場所・納品住所・TELに反映されます。</p>
-        <div id="deliveryLocationList" class="stack"></div>
         <details class="import">
-          <summary>入荷場所を追加</summary>
-          <div class="stack">
-            <label class="field">納品場所名 <input type="text" id="newDeliveryName" placeholder="例）南邦エンタープライズ（本社）"></label>
-            <label class="field">納品住所 <input type="text" id="newDeliveryAddress" placeholder="例）〒892-0871 鹿児島県鹿児島市吉野町5884-1"></label>
-            <label class="field">TEL <input type="tel" id="newDeliveryTel" placeholder="例）099-243-1005"></label>
-          </div>
-          <button class="btn primary block" style="margin-top:10px;" onclick="addDeliveryLocation()">入荷場所を追加</button>
+          <summary>入荷場所一覧</summary>
+          <div id="deliveryLocationList" class="stack"></div>
         </details>
+        <div class="stack" style="margin-top:10px;">
+          <label class="field">納品場所名 <input type="text" id="newDeliveryName" placeholder="例）南邦エンタープライズ（本社）"></label>
+          <label class="field">納品住所 <input type="text" id="newDeliveryAddress" placeholder="例）〒892-0871 鹿児島県鹿児島市吉野町5884-1"></label>
+          <label class="field">TEL <input type="tel" id="newDeliveryTel" placeholder="例）099-243-1005"></label>
+        </div>
+        <button class="btn primary block" style="margin-top:10px;" onclick="addDeliveryLocation()">入荷場所を追加</button>
       </div>
 
       <div class="card" style="border-color: var(--accent); margin-top:10px;">
