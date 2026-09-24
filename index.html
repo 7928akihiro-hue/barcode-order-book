@@ -874,6 +874,9 @@
         <label class="field" style="margin-bottom:10px;">メール送信先
           <select id="orderMailRecipientSelect" onchange="saveSelectedMailRecipient()"></select>
         </label>
+        <label class="field" style="margin-bottom:10px;">入荷場所
+          <select id="orderDeliveryLocationSelect" onchange="saveSelectedDeliveryLocation()"></select>
+        </label>
         <button class="btn primary block" onclick="sendToPC()" id="sendToPcBtn">発注書をメールで送信</button>
       </div>
 
@@ -927,6 +930,17 @@
           <label class="field">アドレス <input type="email" id="newRecipientEmail" placeholder="例）a-watanabe@nanpou-ep.co.jp"></label>
         </div>
         <button class="btn primary block" style="margin-top:10px;" onclick="addMailRecipient()">送り先を追加</button>
+      </div>
+
+      <div class="card" style="border-color: var(--accent); margin-top:10px;">
+        <p class="hint" style="margin-bottom:10px;">発注書に記載する入荷場所（納品場所）の一覧です。発注リスト画面のプルダウンでここに登録した場所を選ぶと、発注書Excelの納品場所・納品住所・TELに反映されます。</p>
+        <div id="deliveryLocationList" class="stack"></div>
+        <div class="stack" style="margin-top:10px;">
+          <label class="field">納品場所名 <input type="text" id="newDeliveryName" placeholder="例）南邦エンタープライズ（本社）"></label>
+          <label class="field">納品住所 <input type="text" id="newDeliveryAddress" placeholder="例）〒892-0871 鹿児島県鹿児島市吉野町5884-1"></label>
+          <label class="field">TEL <input type="tel" id="newDeliveryTel" placeholder="例）099-243-1005"></label>
+        </div>
+        <button class="btn primary block" style="margin-top:10px;" onclick="addDeliveryLocation()">入荷場所を追加</button>
       </div>
 
       <div class="card" style="border-color: var(--accent); margin-top:10px;">
@@ -1126,7 +1140,7 @@
     });
     if (name !== 'scan') { toggleScanner(false); }
     if (name !== 'order') { closeSendHistoryDetail(); }
-    if (name === 'order') { renderOrder(); renderSendHistory(); renderOrderMailRecipientSelect(); }
+    if (name === 'order') { renderOrder(); renderSendHistory(); renderOrderMailRecipientSelect(); renderOrderDeliveryLocationSelect(); }
     if (name === 'products') { renderProducts(); }
     if (name === 'settings') { populateSettingsScreen(); }
     if (name === 'partners') { renderPartners(); }
@@ -2230,8 +2244,124 @@
     try { return localStorage.getItem(PC_SEND_FROM_EMAIL_KEY) || ''; } catch (e) { return ''; }
   }
 
+  var DELIVERY_LOCATIONS_KEY = 'deliveryLocations';
+  var SELECTED_DELIVERY_LOCATION_KEY = 'selectedDeliveryLocationName';
+  var DEFAULT_DELIVERY_LOCATIONS = [
+    { name: '南邦エンタープライズ（本社）', address: '〒892-0871 鹿児島県鹿児島市吉野町5884-1', tel: '099-243-1005' },
+    { name: '南邦エンタープライズ（第２倉庫）', address: '〒892-0871 鹿児島県鹿児島市吉野町5528-4', tel: '099-243-1005' }
+  ];
+
+  function getDeliveryLocations() {
+    try {
+      var raw = localStorage.getItem(DELIVERY_LOCATIONS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { /* fall through to default */ }
+    return DEFAULT_DELIVERY_LOCATIONS.slice();
+  }
+
+  function saveDeliveryLocationsList(list) {
+    try { localStorage.setItem(DELIVERY_LOCATIONS_KEY, JSON.stringify(list)); } catch (e) { toast('この端末では保存できませんでした'); }
+  }
+
+  function renderDeliveryLocationList() {
+    var list = getDeliveryLocations();
+    var container = document.getElementById('deliveryLocationList');
+    if (list.length === 0) {
+      container.innerHTML = '<div class="empty">入荷場所がまだありません。下から追加してください。</div>';
+      return;
+    }
+    container.innerHTML = list.map(function (loc, idx) {
+      return '<div class="card" style="padding:10px;">' +
+        '<div class="stack">' +
+        '<label class="field">納品場所名 <input type="text" value="' + escapeHtml(loc.name) + '" onchange="updateDeliveryLocation(' + idx + ', \'name\', this.value)"></label>' +
+        '<label class="field">納品住所 <input type="text" value="' + escapeHtml(loc.address) + '" onchange="updateDeliveryLocation(' + idx + ', \'address\', this.value)"></label>' +
+        '<label class="field">TEL <input type="tel" value="' + escapeHtml(loc.tel) + '" onchange="updateDeliveryLocation(' + idx + ', \'tel\', this.value)"></label>' +
+        '</div>' +
+        '<div style="text-align:right; margin-top:6px;">' +
+        '<button class="btn ghost" style="font-size:11px; padding:4px 10px; color:var(--warning);" onclick="deleteDeliveryLocation(' + idx + ')">この入荷場所を削除</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function updateDeliveryLocation(idx, field, value) {
+    var list = getDeliveryLocations();
+    if (!list[idx]) return;
+    value = value.trim();
+    var oldName = list[idx].name;
+    list[idx][field] = value;
+    saveDeliveryLocationsList(list);
+    if (field === 'name' && getSelectedDeliveryLocationName() === oldName) {
+      try { localStorage.setItem(SELECTED_DELIVERY_LOCATION_KEY, value); } catch (e) {}
+    }
+    toast('入荷場所を更新しました');
+    renderDeliveryLocationList();
+    renderOrderDeliveryLocationSelect();
+  }
+
+  function deleteDeliveryLocation(idx) {
+    var list = getDeliveryLocations();
+    if (!list[idx]) return;
+    if (!confirm('「' + list[idx].name + '」を削除しますか？')) return;
+    list.splice(idx, 1);
+    saveDeliveryLocationsList(list);
+    renderDeliveryLocationList();
+    renderOrderDeliveryLocationSelect();
+  }
+
+  function addDeliveryLocation() {
+    var name = document.getElementById('newDeliveryName').value.trim();
+    var address = document.getElementById('newDeliveryAddress').value.trim();
+    var tel = document.getElementById('newDeliveryTel').value.trim();
+    if (!name || !address) { toast('納品場所名と納品住所を入力してください'); return; }
+    var list = getDeliveryLocations();
+    list.push({ name: name, address: address, tel: tel });
+    saveDeliveryLocationsList(list);
+    document.getElementById('newDeliveryName').value = '';
+    document.getElementById('newDeliveryAddress').value = '';
+    document.getElementById('newDeliveryTel').value = '';
+    toast('入荷場所を追加しました：' + name);
+    renderDeliveryLocationList();
+    renderOrderDeliveryLocationSelect();
+  }
+
+  function getSelectedDeliveryLocationName() {
+    try { return localStorage.getItem(SELECTED_DELIVERY_LOCATION_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  function saveSelectedDeliveryLocation() {
+    var select = document.getElementById('orderDeliveryLocationSelect');
+    try { localStorage.setItem(SELECTED_DELIVERY_LOCATION_KEY, select.value); } catch (e) {}
+  }
+
+  function renderOrderDeliveryLocationSelect() {
+    var select = document.getElementById('orderDeliveryLocationSelect');
+    var list = getDeliveryLocations();
+    var savedName = getSelectedDeliveryLocationName();
+    if (list.length === 0) {
+      select.innerHTML = '<option value="">入荷場所が未登録です（設定画面で追加してください）</option>';
+      return;
+    }
+    select.innerHTML = list.map(function (loc) {
+      return '<option value="' + escapeHtml(loc.name) + '"' + (loc.name === savedName ? ' selected' : '') + '>' + escapeHtml(loc.name) + '</option>';
+    }).join('');
+    if (!list.some(function (loc) { return loc.name === savedName; })) {
+      select.value = list[0].name;
+      try { localStorage.setItem(SELECTED_DELIVERY_LOCATION_KEY, list[0].name); } catch (e) {}
+    }
+  }
+
+  function getSelectedDeliveryLocation() {
+    var list = getDeliveryLocations();
+    var savedName = getSelectedDeliveryLocationName();
+    var match = list.filter(function (loc) { return loc.name === savedName; })[0];
+    if (match) return match;
+    return list.length ? list[0] : { name: '', address: '', tel: '' };
+  }
+
   function populateSettingsScreen() {
     renderMailRecipientList();
+    renderDeliveryLocationList();
 
     var savedFrom = getPcSendFromEmail();
     document.getElementById('pcSendFromEmail').value = savedFrom;
@@ -2310,7 +2440,12 @@
     btn.textContent = '送信中…';
 
     var now = new Date();
-    var snapshot = { sentAt: now.toISOString(), items: items, recipientEmail: getSelectedMailRecipientEmail(), senderEmail: getPcSendFromEmail(), partners: partners };
+    var deliveryLocation = getSelectedDeliveryLocation();
+    var snapshot = {
+      sentAt: now.toISOString(), items: items,
+      recipientEmail: getSelectedMailRecipientEmail(), senderEmail: getPcSendFromEmail(), partners: partners,
+      deliveryName: deliveryLocation.name, deliveryAddress: deliveryLocation.address, deliveryTel: deliveryLocation.tel
+    };
     // Base64-encode the UTF-8 JSON so the POST body is pure ASCII: Apps Script's
     // e.postData.contents mangles multi-byte (Japanese) text, but base64 text survives intact.
     var jsonUtf8 = JSON.stringify(snapshot);
