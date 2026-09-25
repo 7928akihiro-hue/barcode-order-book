@@ -1552,9 +1552,19 @@
       var d = new Date(h.sentAt);
       var label = pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
       var pieces = h.items.reduce(function (s, it) { return s + (it.pieces || 0); }, 0);
+      var bySupplier = {};
+      var supplierOrder = [];
+      h.items.forEach(function (it) {
+        var key = it.supplier || '仕入れ先未設定';
+        if (!(key in bySupplier)) { bySupplier[key] = 0; supplierOrder.push(key); }
+        bySupplier[key] += (it.pieces || 0);
+      });
+      var supplierSummary = supplierOrder.map(function (s) {
+        return escapeHtml(s) + ' ' + bySupplier[s] + '個';
+      }).join('、');
       return '<div class="item-row" style="cursor:pointer;" onclick="openSendHistoryDetail(' + idx + ')">' +
         '<div class="item-main">' +
-          '<div class="item-name">' + escapeHtml(label) + '　送信済み</div>' +
+          '<div class="item-name">' + escapeHtml(label) + '　送信済み　<span class="supplier-name">' + supplierSummary + '</span></div>' +
           '<div class="item-sub">' + h.items.length + '品目 ・ 計' + pieces + '個</div>' +
         '</div>' +
       '</div>';
