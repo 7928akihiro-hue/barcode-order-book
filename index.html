@@ -1557,14 +1557,14 @@
       h.items.forEach(function (it) {
         var key = it.supplier || '仕入れ先未設定';
         if (!(key in bySupplier)) { bySupplier[key] = 0; supplierOrder.push(key); }
-        bySupplier[key] += (it.pieces || 0);
+        bySupplier[key] += 1;
       });
       var supplierSummary = supplierOrder.map(function (s) {
-        return escapeHtml(s) + ' ' + bySupplier[s] + '個';
-      }).join('、');
+        return escapeHtml(s) + ' ' + bySupplier[s] + '品目';
+      }).join('<br>');
       return '<div class="item-row" style="cursor:pointer;" onclick="openSendHistoryDetail(' + idx + ')">' +
         '<div class="item-main">' +
-          '<div class="item-name">' + escapeHtml(label) + '　送信済み　<span class="supplier-name">' + supplierSummary + '</span></div>' +
+          '<div class="item-name" style="display:flex; align-items:flex-start; gap:14px;"><span>' + escapeHtml(label) + '　送信済み</span><span class="supplier-name" style="line-height:1.5;">' + supplierSummary + '</span></div>' +
           '<div class="item-sub">' + h.items.length + '品目 ・ 計' + pieces + '個</div>' +
         '</div>' +
       '</div>';
