@@ -1119,6 +1119,7 @@
     pt.hqAddress = document.getElementById('ptHq_' + idx).value.trim();
     pt.warehouseAddress = document.getElementById('ptWarehouse_' + idx).value.trim();
     saveState();
+    markSyncDirty('partners');
     toast(name + ' の情報を保存しました');
   }
 
@@ -1126,6 +1127,7 @@
     if (!confirm('「' + name + '」を本当に削除してもよろしいですか？\nこの操作は取り消せません。')) return;
     partners = partners.filter(function (pt) { return pt.name !== name; });
     saveState();
+    markSyncDirty('partners');
     renderPartners();
     toast('取引先を削除しました');
   }
@@ -1150,6 +1152,7 @@
     if (name === 'products') { renderProducts(); }
     if (name === 'settings') { populateSettingsScreen(); }
     if (name === 'partners') { renderPartners(); }
+    if (name === 'products' || name === 'settings' || name === 'partners' || name === 'order') { pullSyncAll(); }
   }
 
   /* ---------------- products ---------------- */
@@ -1185,6 +1188,8 @@
     }
     ensurePartner(supplier);
     saveState();
+    markSyncDirty('products');
+    markSyncDirty('partners');
     renderProducts();
     resetProductForm();
     toast(existing ? '商品を更新しました' : '商品を登録しました');
@@ -1230,6 +1235,7 @@
   function deleteProduct(jan) {
     products = products.filter(function (p) { return p.jan !== jan; });
     saveState();
+    markSyncDirty('products');
     renderProducts();
     toast('商品を削除しました');
   }
@@ -1413,6 +1419,8 @@
         ensurePartner(supplier);
       });
       saveState();
+      markSyncDirty('products');
+      markSyncDirty('partners');
       renderProducts();
       toast(added + '件の商品を取り込みました');
       evt.target.value = '';
@@ -2189,6 +2197,7 @@
     var oldName = list[idx].name;
     list[idx][field] = value;
     saveMailRecipientsList(list);
+    markSyncDirty('mailRecipients');
     if (field === 'name' && getSelectedMailRecipientName() === oldName) {
       try { localStorage.setItem(SELECTED_RECIPIENT_KEY, value); } catch (e) {}
     }
@@ -2203,6 +2212,7 @@
     if (!confirm('「' + list[idx].name + '」を削除しますか？')) return;
     list.splice(idx, 1);
     saveMailRecipientsList(list);
+    markSyncDirty('mailRecipients');
     renderMailRecipientList();
     renderOrderMailRecipientSelect();
   }
@@ -2215,6 +2225,7 @@
     var list = getMailRecipients();
     list.push({ name: name, email: email });
     saveMailRecipientsList(list);
+    markSyncDirty('mailRecipients');
     document.getElementById('newRecipientName').value = '';
     document.getElementById('newRecipientEmail').value = '';
     toast('送り先を追加しました：' + name);
@@ -2307,6 +2318,7 @@
     var oldName = list[idx].name;
     list[idx][field] = value;
     saveDeliveryLocationsList(list);
+    markSyncDirty('deliveryLocations');
     if (field === 'name' && getSelectedDeliveryLocationName() === oldName) {
       try { localStorage.setItem(SELECTED_DELIVERY_LOCATION_KEY, value); } catch (e) {}
     }
@@ -2321,6 +2333,7 @@
     if (!confirm('「' + list[idx].name + '」を削除しますか？')) return;
     list.splice(idx, 1);
     saveDeliveryLocationsList(list);
+    markSyncDirty('deliveryLocations');
     renderDeliveryLocationList();
     renderOrderDeliveryLocationSelect();
   }
@@ -2333,6 +2346,7 @@
     var list = getDeliveryLocations();
     list.push({ name: name, address: address, tel: tel });
     saveDeliveryLocationsList(list);
+    markSyncDirty('deliveryLocations');
     document.getElementById('newDeliveryName').value = '';
     document.getElementById('newDeliveryAddress').value = '';
     document.getElementById('newDeliveryTel').value = '';
@@ -2524,12 +2538,118 @@
     });
   }
 
+  /* ---------------- multi-device sync (商品マスタ・取引先マスタ・メール送信先・入荷場所) ----------------
+     端末ごとのlocalStorageだけでなく、Apps Script経由でGoogleスプレッドシートにも
+     保存し、他の端末がそれを定期的に取り込むことで全端末が最新の状態に揃う。
+     衝突時は「あとから送信された方（updatedAtが新しい方）」を採用する。 */
+  var SYNC_URL = PC_SEND_URL;
+  var SYNC_PULL_INTERVAL_MS = 2 * 60 * 1000; // 2分おきに他端末の更新を自動で取り込む
+  var syncPushTimers = {};
+
+  var SYNC_COLLECTIONS = {
+    products: {
+      get: function () { return products; },
+      set: function (data) { products = data || []; saveState(); renderProducts(); }
+    },
+    partners: {
+      get: function () { return partners; },
+      set: function (data) { partners = data || []; saveState(); renderPartners(); }
+    },
+    mailRecipients: {
+      get: function () { return getMailRecipients(); },
+      set: function (data) {
+        saveMailRecipientsList(data || []);
+        renderMailRecipientList();
+        renderOrderMailRecipientSelect();
+      }
+    },
+    deliveryLocations: {
+      get: function () { return getDeliveryLocations(); },
+      set: function (data) {
+        saveDeliveryLocationsList(data || []);
+        renderDeliveryLocationList();
+        renderOrderDeliveryLocationSelect();
+      }
+    }
+  };
+
+  function syncUpdatedAtKey(key) { return 'sync_updatedAt_' + key; }
+  function syncLastSyncedJsonKey(key) { return 'sync_lastSyncedJson_' + key; }
+
+  function getSyncUpdatedAt(key) {
+    try { return localStorage.getItem(syncUpdatedAtKey(key)) || ''; } catch (e) { return ''; }
+  }
+
+  function setSyncUpdatedAt(key, iso) {
+    try { localStorage.setItem(syncUpdatedAtKey(key), iso); } catch (e) { /* best effort only */ }
+  }
+
+  // 商品マスタ等を編集した直後に呼ぶ。短い間隔での連続編集（CSV一括登録など）は
+  // まとめて1回の送信になるようデバウンスする。
+  function markSyncDirty(key) {
+    setSyncUpdatedAt(key, new Date().toISOString());
+    clearTimeout(syncPushTimers[key]);
+    syncPushTimers[key] = setTimeout(function () { pushSyncCollection(key); }, 800);
+  }
+
+  function pushSyncCollection(key) {
+    var coll = SYNC_COLLECTIONS[key];
+    if (!coll) return;
+    var data = coll.get();
+    var json = JSON.stringify(data);
+    try {
+      if (localStorage.getItem(syncLastSyncedJsonKey(key)) === json) return; // 前回送信と同じ内容なら送らない
+    } catch (e) { /* best effort only */ }
+    var updatedAt = getSyncUpdatedAt(key) || new Date().toISOString();
+
+    var payload = { action: 'syncPush', collection: key, data: data, updatedAt: updatedAt };
+    var jsonUtf8 = JSON.stringify(payload);
+    var base64Body = btoa(unescape(encodeURIComponent(jsonUtf8)));
+
+    fetch(SYNC_URL, { method: 'POST', body: base64Body })
+      .then(function (res) { return res.json(); })
+      .then(function (result) {
+        if (!result || result.status !== 'ok') return;
+        if (result.accepted === false && result.data) {
+          // 他の端末がこちらより新しい内容を先に送信していたので、サーバー側の内容を採用する
+          coll.set(result.data);
+          setSyncUpdatedAt(key, result.updatedAt);
+          try { localStorage.setItem(syncLastSyncedJsonKey(key), JSON.stringify(result.data)); } catch (e) {}
+        } else {
+          if (result.updatedAt) setSyncUpdatedAt(key, result.updatedAt);
+          try { localStorage.setItem(syncLastSyncedJsonKey(key), json); } catch (e) {}
+        }
+      })
+      .catch(function () { /* オフライン等: 次回の自動同期で再試行される */ });
+  }
+
+  function pullSyncAll() {
+    fetch(SYNC_URL + '?action=syncPull')
+      .then(function (res) { return res.json(); })
+      .then(function (result) {
+        if (!result || result.status !== 'ok' || !result.collections) return;
+        Object.keys(SYNC_COLLECTIONS).forEach(function (key) {
+          var remote = result.collections[key];
+          if (!remote || !remote.updatedAt) return;
+          var localUpdatedAt = getSyncUpdatedAt(key);
+          if (!localUpdatedAt || remote.updatedAt > localUpdatedAt) {
+            SYNC_COLLECTIONS[key].set(remote.data);
+            setSyncUpdatedAt(key, remote.updatedAt);
+            try { localStorage.setItem(syncLastSyncedJsonKey(key), JSON.stringify(remote.data)); } catch (e) {}
+          }
+        });
+      })
+      .catch(function () { /* オフライン等: 次回の自動同期で再試行される */ });
+  }
+
   /* ---------------- init ---------------- */
   loadState();
   renderProducts();
   renderOrder();
   renderSendHistory();
   document.getElementById('scanFeed').innerHTML = '<div class="empty">まだ読み取り履歴がありません</div>';
+  pullSyncAll();
+  setInterval(pullSyncAll, SYNC_PULL_INTERVAL_MS);
 </script>
 
 </body>
