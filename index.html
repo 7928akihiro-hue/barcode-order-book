@@ -2623,6 +2623,13 @@
       .catch(function () { /* オフライン等: 次回の自動同期で再試行される */ });
   }
 
+  function syncTick() {
+    pullSyncAll();
+    Object.keys(SYNC_COLLECTIONS).forEach(function (key) {
+      if (getSyncUpdatedAt(key)) pushSyncCollection(key);
+    });
+  }
+
   function pullSyncAll() {
     fetch(SYNC_URL + '?action=syncPull')
       .then(function (res) { return res.json(); })
@@ -2648,8 +2655,8 @@
   renderOrder();
   renderSendHistory();
   document.getElementById('scanFeed').innerHTML = '<div class="empty">まだ読み取り履歴がありません</div>';
-  pullSyncAll();
-  setInterval(pullSyncAll, SYNC_PULL_INTERVAL_MS);
+  syncTick();
+  setInterval(syncTick, SYNC_PULL_INTERVAL_MS);
 </script>
 
 </body>
