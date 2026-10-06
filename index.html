@@ -790,6 +790,7 @@
     <section id="screen-products" class="screen">
       <div id="productScreenIntro">
       <h2 class="section-title">商品マスタ <span class="count" id="productCount">0件</span></h2>
+      <p class="hint" id="syncStatus" style="margin:0 0 8px; font-size:11px;"></p>
       <p class="hint">最初にスキャン対象の商品を登録してください。JANコード・品番・商品名・仕入れ先・仕入れ先メール・発注単位（1ケースの個数）・単価を登録します。スキャン1回で1ケース分が発注リストに追加されます。</p>
 
       <div class="card" id="productFormCollapsed" style="text-align:center;">
@@ -2630,11 +2631,33 @@
     });
   }
 
+  function renderSyncStatus() {
+    var el = document.getElementById('syncStatus');
+    if (!el) return;
+    var pulled = '';
+    var err = '';
+    try {
+      pulled = localStorage.getItem('sync_lastPullAt') || '';
+      err = localStorage.getItem('sync_lastError') || '';
+    } catch (e) {}
+    var pulledText = pulled ? new Date(pulled).toLocaleTimeString('ja-JP') : 'まだありません';
+    el.textContent = '同期：最終取り込み ' + pulledText + (err ? '（エラー：' + err + '）' : '');
+  }
+
   function pullSyncAll() {
     fetch(SYNC_URL + '?action=syncPull')
       .then(function (res) { return res.json(); })
       .then(function (result) {
-        if (!result || result.status !== 'ok' || !result.collections) return;
+        if (!result || result.status !== 'ok' || !result.collections) {
+          try { localStorage.setItem('sync_lastError', result && result.message ? result.message : '応答が不正'); } catch (e) {}
+          renderSyncStatus();
+          return;
+        }
+        try {
+          localStorage.setItem('sync_lastPullAt', new Date().toISOString());
+          localStorage.removeItem('sync_lastError');
+        } catch (e) {}
+        renderSyncStatus();
         Object.keys(SYNC_COLLECTIONS).forEach(function (key) {
           var remote = result.collections[key];
           if (!remote || !remote.updatedAt) return;
@@ -2646,7 +2669,10 @@
           }
         });
       })
-      .catch(function () { /* オフライン等: 次回の自動同期で再試行される */ });
+      .catch(function (err) {
+        try { localStorage.setItem('sync_lastError', String(err && err.message ? err.message : err)); } catch (e) {}
+        renderSyncStatus();
+      });
   }
 
   /* ---------------- init ---------------- */
@@ -2655,6 +2681,7 @@
   renderOrder();
   renderSendHistory();
   document.getElementById('scanFeed').innerHTML = '<div class="empty">まだ読み取り履歴がありません</div>';
+  renderSyncStatus();
   syncTick();
   setInterval(syncTick, SYNC_PULL_INTERVAL_MS);
 </script>
